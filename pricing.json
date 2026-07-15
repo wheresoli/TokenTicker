@@ -4,7 +4,7 @@
     "unit": "USD per 1,000,000 tokens",
     "tier": "Standard / pay-as-you-go (non-batch, non-cached unless noted)",
     "updated": "2026-07-15",
-    "disclaimer": "There is no canonical cross-provider pricing API. These numbers are hand-maintained from each provider's own pricing page (linked per provider). Verify against the source before relying on a figure."
+    "disclaimer": "No canonical cross-provider pricing API exists. Prices are auto-refreshed daily from the OpenRouter aggregator (with sanity guardrails) and re-checked live in your browser; OpenRouter's figures can lag or differ from each provider's official page (linked per provider). Verify against the source before relying on a figure."
   },
   "providers": [
     {

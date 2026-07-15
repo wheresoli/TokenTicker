@@ -354,7 +354,7 @@
   $("#tpt-title").textContent = DATA.meta.title;
   $("#tpt-sub").innerHTML = `${DATA.meta.unit} &middot; ${DATA.meta.tier} &middot; updated <b>${DATA.meta.updated}</b>`;
   $("#tpt-srcs").innerHTML = "Sources: " + DATA.providers.map(p =>
-    `<a href="${p.source}" target="_blank" rel="noopener">${p.name} <span style="color:var(--faint)">(verified ${p.verified})</span></a>`
+    `<a href="${p.source}" target="_blank" rel="noopener">${p.name} <span style="color:var(--faint)">(refreshed ${p.verified})</span></a>`
   ).join("");
   $("#tpt-disc").textContent = DATA.meta.disclaimer;
 
@@ -502,9 +502,13 @@
         const at = HISTORY.snapshots.findIndex(s => s.date === today);
         if (at >= 0) HISTORY.snapshots[at] = { date: today, prices }; else HISTORY.snapshots.push({ date: today, prices });
         render(); renderChart();
+        status.classList.add("is-live"); txt.textContent = `live · ${n}/${rows.length} · ${today}`;
+        status.title = `${n} of ${rows.length} models refreshed live from the OpenRouter feed; the rest are the committed snapshot`;
+      } else {
+        // Feed reachable but no models matched — the table is still the committed snapshot.
+        status.classList.remove("is-live"); txt.textContent = `snapshot · ${DATA.meta.updated}`;
+        status.title = "Live feed reachable but no models matched — showing the committed snapshot";
       }
-      status.classList.add("is-live"); txt.textContent = `live · ${today}`;
-      status.title = "Current prices fetched live from the OpenRouter feed";
       renderLegend();
     } catch (e) {
       status.classList.remove("is-live"); txt.textContent = `snapshot · ${DATA.meta.updated}`;
