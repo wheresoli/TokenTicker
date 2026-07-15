@@ -1,0 +1,12 @@
+# Local Claude Code tooling / settings
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Node (none committed today, but in case deps are added later)
+node_modules/
