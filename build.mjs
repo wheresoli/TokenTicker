@@ -9,7 +9,10 @@ const dir = dirname(fileURLToPath(import.meta.url));
 const read = f => readFileSync(join(dir, f), "utf8");
 
 const data = JSON.parse(read("pricing.json"));
-const inner = read("template.html").replace("__PRICING_JSON__", JSON.stringify(data, null, 2));
+const history = JSON.parse(read("history.json"));
+const inner = read("template.html")
+  .replace("__PRICING_JSON__", JSON.stringify(data))
+  .replace("__HISTORY_JSON__", JSON.stringify(history));
 
 const title = data.meta.title;
 const desc = `${data.meta.unit} across OpenAI, Anthropic & Google. Updated ${data.meta.updated}.`;

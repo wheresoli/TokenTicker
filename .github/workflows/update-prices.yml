@@ -1,0 +1,41 @@
+name: Update prices
+
+on:
+  schedule:
+    - cron: "17 12 * * *" # daily ~12:17 UTC (offset from the hour to dodge cron congestion)
+  workflow_dispatch: {} # allow manual runs from the Actions tab / `gh workflow run`
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Refresh prices + append history snapshot
+        run: node update.mjs
+
+      - name: Rebuild HTML
+        run: node build.mjs
+
+      - name: Commit if changed
+        run: |
+          git config user.name "tokenticker-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add pricing.json history.json index.html llm-token-price-index.html
+            git commit -m "chore: daily price refresh ($(date -u +%F))"
+            git push
+          else
+            echo "No price changes today."
+          fi

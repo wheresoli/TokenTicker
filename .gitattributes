@@ -1,0 +1,5 @@
+# Normalize line endings to LF in the repo so Windows commits and the Linux
+# GitHub Action produce byte-identical build output (no CRLF/LF churn).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
