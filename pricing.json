@@ -3,7 +3,7 @@
     "title": "LLM API Token Price Index",
     "unit": "USD per 1,000,000 tokens",
     "tier": "Standard / pay-as-you-go (non-batch, non-cached unless noted)",
-    "updated": "2026-07-15",
+    "updated": "2026-07-16",
     "disclaimer": "No canonical cross-provider pricing API exists. Prices are auto-refreshed daily from the OpenRouter aggregator (with sanity guardrails) and re-checked live in your browser; OpenRouter's figures can lag or differ from each provider's official page (linked per provider). Verify against the source before relying on a figure."
   },
   "providers": [
@@ -11,7 +11,7 @@
       "name": "Anthropic",
       "accent": "#d97757",
       "source": "https://platform.claude.com/docs/en/about-claude/models/overview",
-      "verified": "2026-07-15",
+      "verified": "2026-07-16",
       "models": [
         {
           "name": "Claude Fable 5",
@@ -56,7 +56,7 @@
       "name": "OpenAI",
       "accent": "#10a37f",
       "source": "https://developers.openai.com/api/docs/pricing",
-      "verified": "2026-07-15",
+      "verified": "2026-07-16",
       "models": [
         {
           "name": "GPT-5.6 Sol",
@@ -91,7 +91,7 @@
       "name": "Google",
       "accent": "#4285f4",
       "source": "https://ai.google.dev/gemini-api/docs/pricing",
-      "verified": "2026-07-15",
+      "verified": "2026-07-16",
       "models": [
         {
           "name": "Gemini 3.1 Pro",
