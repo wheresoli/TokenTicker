@@ -1,10 +1,6 @@
 # TokenTicker
 
-A small, portable, shareable price-per-million-token index for the major LLM API
-providers (OpenAI · Anthropic · Google), with a **table view**, a **cost-per-call
-estimator**, and a **trends view** that graphs prices over time.
-
-Live: **https://wheresoli.github.io/TokenTicker/**
+[A price-per-million-token index for major LLM API providers including OpenAI, Anthropic, and Google.](https://wheresoli.github.io/TokenTicker/)
 
 ## How freshness works
 
