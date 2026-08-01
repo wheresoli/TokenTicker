@@ -471,7 +471,14 @@
 
     let svg = `<svg class="tpt-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${metricLabel()} over time">`;
     yTicks(vMin, vMax, log).forEach(t => { const y = ys(t); svg += `<line class="grid" x1="${m.l}" y1="${y.toFixed(1)}" x2="${W - m.r}" y2="${y.toFixed(1)}"/><text class="tick" x="${m.l - 8}" y="${(y + 3).toFixed(1)}" text-anchor="end">${tickLab(t)}</text>`; });
-    dates.forEach((d, i) => { svg += `<text class="tick" x="${xi(i).toFixed(1)}" y="${H - m.b + 16}" text-anchor="middle">${d.slice(5)}</text>`; });
+    // Thin x-axis labels to ~7 max so a long daily history doesn't smear into an
+    // unreadable band; always keep the most recent date, drop any that would crowd it.
+    const xStep = Math.max(1, Math.ceil(dates.length / 7));
+    dates.forEach((d, i) => {
+      const last = i === dates.length - 1;
+      if (!last && (i % xStep !== 0 || dates.length - 1 - i < xStep * 0.6)) return;
+      svg += `<text class="tick" x="${xi(i).toFixed(1)}" y="${H - m.b + 16}" text-anchor="middle">${d.slice(5)}</text>`;
+    });
     svg += `<line class="axis" x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}"/>`;
     const labels = [];
     series.forEach(s => {

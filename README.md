@@ -1,11 +1,6 @@
 # TokenTicker
 
-A small, portable, shareable price-per-million-token index for the major LLM API
-providers — Western (Anthropic · OpenAI · Google · xAI · Meta · Mistral) and Eastern
-(DeepSeek · Qwen · Moonshot · Z.ai) — with a **table view**, a **cost-per-call
-estimator**, and a **trends view** that graphs prices over time.
-
-Live: **https://wheresoli.github.io/TokenTicker/**
+[A price-per-million-token index for major Western & Eastern LLM API providers — Anthropic, OpenAI, Google, xAI, Meta, Mistral, DeepSeek, Qwen, Moonshot, and Z.ai.](https://wheresoli.github.io/TokenTicker/)
 
 ## How freshness works
 
