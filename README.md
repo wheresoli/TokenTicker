@@ -1,7 +1,8 @@
 # TokenTicker
 
 A small, portable, shareable price-per-million-token index for the major LLM API
-providers (OpenAI · Anthropic · Google), with a **table view**, a **cost-per-call
+providers — Western (Anthropic · OpenAI · Google · xAI · Meta · Mistral) and Eastern
+(DeepSeek · Qwen · Moonshot · Z.ai) — with a **table view**, a **cost-per-call
 estimator**, and a **trends view** that graphs prices over time.
 
 Live: **https://wheresoli.github.io/TokenTicker/**
@@ -30,7 +31,10 @@ Guardrails are the same in both: bounds-check, ignore absurd jumps, keep last-kn
 
 Every update appends a `{date, prices}` snapshot to `history.json`. The **Trends**
 view graphs any metric (input, output, or cost-per-call) over time, per model, with
-log/linear scale and model toggles. The chart is a **dependency-free inline SVG** —
+log/linear scale. To keep 30 series manageable, the picker is **grouped by provider**
+with a per-provider select-all and quick **Flagships / All / Clear** presets (it opens
+on the flagships), a live "N of 30 shown" count, and de-cluttered end-labels on the
+chart. The chart is a **dependency-free inline SVG** —
 no chart library — so it works offline, on Pages, and inside the Artifact. History
 starts with a single real snapshot and fills in one point per day; **past points are
 never fabricated.**
@@ -60,8 +64,14 @@ node build.mjs    # regenerate index.html + the Artifact fragment
 Curation is preserved across refreshes: `update.mjs` only touches numeric fields and
 `verified` dates — it never overwrites model names, tiers, or notes. A model the feed
 doesn't match (e.g. `gemini-3.1-pro`) keeps its curated value and is listed under
-"missing from feed" in the run report. Provider line/dot colors are validated
-colorblind-safe on both light and dark surfaces (`dataviz` skill's `validate_palette.js`).
+"missing from feed" in the run report. Provider line/dot colors live in `pricing.json`
+(`accent` / `accentDark`) and are injected at runtime, so a new provider needs no template
+edit. The palette is validated with the `dataviz` skill's `validate_palette.js`: in file
+order it clears the adjacent-pair gate on both light and dark surfaces, with the worst
+colorblind ΔE in the 6–8 "floor" band — which is why identity is **also** carried by the
+always-visible provider name and the chart's model end-label, never by color alone. With
+10 providers no palette can make *every* pair colorblind-distinct at once (a hard limit
+around 8), so when many series overlap the labels do the disambiguating.
 
 ## Publish
 

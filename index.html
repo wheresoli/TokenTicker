@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LLM API Token Price Index</title>
-<meta name="description" content="USD per 1,000,000 tokens across OpenAI, Anthropic & Google. Updated 2026-07-15.">
+<meta name="description" content="USD per 1,000,000 tokens — 30 models across 10 major Western & Eastern LLM providers. Updated 2026-08-01.">
 <style>html,body{margin:0}body{background:#fbfbf9}@media(prefers-color-scheme:dark){body{background:#16161a}}:root[data-theme="dark"] body{background:#16161a}:root[data-theme="light"] body{background:#fbfbf9}</style>
 </head>
 <body>
@@ -46,12 +46,12 @@
     --line: #2c2c33; --line-strong: #3a3a42; --bar: #2a2a31;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
   }
-  /* Provider hues — validated colorblind-safe on both surfaces (scripts/validate_palette.js).
-     Anthropic shifts on dark to stay inside the lightness band; OpenAI/Google pass unchanged. */
-  :root { --c-anthropic: #d97757; --c-openai: #10a37f; --c-google: #4285f4; }
-  @media (prefers-color-scheme: dark) { :root { --c-anthropic: #c86440; } }
-  :root[data-theme="light"] { --c-anthropic: #d97757; }
-  :root[data-theme="dark"] { --c-anthropic: #c86440; }
+  /* Provider hues (--c-<slug>) are injected at runtime from pricing.json's `accent` /
+     `accentDark` fields — see injectProviderColors() below — so adding a provider needs
+     no edit here. The set is validated colorblind-safe in file order with the dataviz
+     skill's validate_palette.js (adjacent gate, both surfaces); see README for the
+     honest limits past 8 providers. A provider with L>0.67 (Anthropic, Moonshot amber)
+     carries an `accentDark` shifted into the dark lightness band. */
 
   * { box-sizing: border-box; }
   .tpt {
@@ -167,13 +167,32 @@
   .tpt-chart .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .tpt-chart .dot { stroke: var(--panel); stroke-width: 1.5; }
   .tpt-chart .endlab { font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .tpt-chart .lead { stroke-width: 1; opacity: .45; }
   .tpt-empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 40px 10px; }
-  .tpt-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .tpt-leg { display: inline-flex; align-items: center; gap: 9px; font: inherit; font-size: .78rem; cursor: pointer; background: transparent; border: 1px solid var(--line-strong); border-radius: 999px; padding: 5px 12px; color: var(--ink); }
-  .tpt-leg[aria-pressed="false"] { opacity: .5; }
-  .tpt-swatch { width: 18px; border-top: 3px solid var(--faint); border-radius: 2px; flex: none; }
-  .tpt-leg .lv { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--faint); }
-  .tpt-hint { font-size: .75rem; color: var(--faint); margin: 12px 0 0; }
+  /* Series picker: quick presets + provider-grouped toggles (replaces a flat 30-pill wall) */
+  .tpt-legbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
+  .tpt-legchips { display: inline-flex; gap: 6px; }
+  .tpt-selcount { margin-left: auto; font-size: .74rem; color: var(--faint); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .tpt-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; margin-top: 10px; }
+  .tpt-group { border: 1px solid var(--line); border-radius: 11px; background: var(--panel); padding: 6px 7px 7px; transition: opacity .15s; }
+  .tpt-group[data-state="off"] { opacity: .6; }
+
+  .tpt-grouphead { display: flex; align-items: center; gap: 8px; width: 100%; font: inherit; cursor: pointer; background: transparent; border: none; border-radius: 7px; padding: 4px 5px; color: var(--ink); }
+  .tpt-grouphead:hover { background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
+  .tpt-gdot { width: 10px; height: 10px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 0%, transparent); }
+  .tpt-group[data-state="off"] .tpt-gdot { background: transparent !important; box-shadow: inset 0 0 0 2px var(--line-strong); }
+  .tpt-gname { font-weight: 600; font-size: .82rem; letter-spacing: -.01em; }
+  .tpt-gcount { margin-left: auto; font-size: .68rem; color: var(--faint); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .tpt-groupmodels { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
+  .tpt-leg { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font: inherit; font-size: .76rem; cursor: pointer; background: transparent; border: none; border-radius: 6px; padding: 4px 6px 4px 7px; color: var(--ink); }
+  .tpt-leg:hover { background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
+  .tpt-leg[aria-pressed="false"] { opacity: .4; }
+  .tpt-swatch { width: 16px; border-top: 3px solid var(--faint); border-radius: 2px; flex: none; }
+  .tpt-leg-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpt-leg .lv { margin-left: auto; padding-left: 8px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--faint); font-size: .72rem; }
+  .tpt-hint { font-size: .75rem; color: var(--faint); margin: 14px 0 0; }
 
   /* Narrow screens: collapse each row into a stacked card so nothing scrolls sideways. */
   @media (max-width: 820px) {
@@ -264,7 +283,16 @@
         </span>
       </div>
       <div id="tpt-chart-host"></div>
-      <div class="tpt-legend" id="tpt-legend"></div>
+      <div class="tpt-legbar">
+        <span class="tpt-mini-label">Show</span>
+        <span class="tpt-legchips" role="group" aria-label="Quick select">
+          <button class="tpt-chip" data-preset="flagships" type="button">Flagships</button>
+          <button class="tpt-chip" data-preset="all" type="button">All</button>
+          <button class="tpt-chip" data-preset="none" type="button">Clear</button>
+        </span>
+        <span class="tpt-selcount" id="tpt-selcount"></span>
+      </div>
+      <div class="tpt-groups" id="tpt-legend"></div>
       <p class="tpt-hint" id="tpt-hint"></p>
     </div>
   </div>
@@ -276,8 +304,8 @@
 </div>
 
 <script>
-  const DATA = {"meta":{"title":"LLM API Token Price Index","unit":"USD per 1,000,000 tokens","tier":"Standard / pay-as-you-go (non-batch, non-cached unless noted)","updated":"2026-07-15","disclaimer":"No canonical cross-provider pricing API exists. Prices are auto-refreshed daily from the OpenRouter aggregator (with sanity guardrails) and re-checked live in your browser; OpenRouter's figures can lag or differ from each provider's official page (linked per provider). Verify against the source before relying on a figure."},"providers":[{"name":"Anthropic","accent":"#d97757","source":"https://platform.claude.com/docs/en/about-claude/models/overview","verified":"2026-07-15","models":[{"name":"Claude Fable 5","id":"claude-fable-5","tier":"frontier","input":10,"output":50,"context":"1M","cachedInput":1},{"name":"Claude Opus 4.8","id":"claude-opus-4-8","tier":"flagship","input":5,"output":25,"context":"1M","cachedInput":0.5},{"name":"Claude Sonnet 5","id":"claude-sonnet-5","tier":"workhorse","input":2,"output":10,"context":"1M","note":"Intro pricing $2 / $10 through 2026-08-31","cachedInput":0.2},{"name":"Claude Haiku 4.5","id":"claude-haiku-4-5","tier":"small","input":1,"output":5,"context":"200K","cachedInput":0.1}]},{"name":"OpenAI","accent":"#10a37f","source":"https://developers.openai.com/api/docs/pricing","verified":"2026-07-15","models":[{"name":"GPT-5.6 Sol","id":"gpt-5.6-sol","tier":"flagship","input":5,"output":30,"cachedInput":0.5,"context":"1M"},{"name":"GPT-5.6 Terra","id":"gpt-5.6-terra","tier":"workhorse","input":2.5,"output":15,"cachedInput":0.25,"context":"400K"},{"name":"GPT-5.4 Nano","id":"gpt-5.4-nano","tier":"small","input":0.2,"output":1.25,"cachedInput":0.02,"context":"400K"}]},{"name":"Google","accent":"#4285f4","source":"https://ai.google.dev/gemini-api/docs/pricing","verified":"2026-07-15","models":[{"name":"Gemini 3.1 Pro","id":"gemini-3.1-pro","tier":"flagship","input":2,"output":12,"context":"1M","note":"Prompts >200K tokens: $4 / $18"},{"name":"Gemini 3.5 Flash","id":"gemini-3.5-flash","tier":"flagship","input":1.5,"output":9,"context":"1M","cachedInput":0.15},{"name":"Gemini 2.5 Flash","id":"gemini-2.5-flash","tier":"workhorse","input":0.3,"output":2.5,"cachedInput":0.03,"context":"1M"},{"name":"Gemini 2.5 Flash-Lite","id":"gemini-2.5-flash-lite","tier":"small","input":0.1,"output":0.4,"cachedInput":0.01,"context":"1M"}]}]};
-  const HISTORY = {"unit":"USD per 1,000,000 tokens","note":"Daily snapshots appended by the update workflow (update.mjs). Keyed by \"Provider:model-id\". Starts sparse and fills in over time; do not fabricate past points.","snapshots":[{"date":"2026-07-15","prices":{"Anthropic:claude-fable-5":{"in":10,"out":50},"Anthropic:claude-opus-4-8":{"in":5,"out":25},"Anthropic:claude-sonnet-5":{"in":2,"out":10},"Anthropic:claude-haiku-4-5":{"in":1,"out":5},"OpenAI:gpt-5.6-sol":{"in":5,"out":30},"OpenAI:gpt-5.6-terra":{"in":2.5,"out":15},"OpenAI:gpt-5.4-nano":{"in":0.2,"out":1.25},"Google:gemini-3.1-pro":{"in":2,"out":12},"Google:gemini-3.5-flash":{"in":1.5,"out":9},"Google:gemini-2.5-flash":{"in":0.3,"out":2.5},"Google:gemini-2.5-flash-lite":{"in":0.1,"out":0.4}}}]};
+  const DATA = {"meta":{"title":"LLM API Token Price Index","unit":"USD per 1,000,000 tokens","tier":"Standard / pay-as-you-go (non-batch, non-cached unless noted)","updated":"2026-08-01","disclaimer":"No canonical cross-provider pricing API exists. Prices are auto-refreshed daily from the OpenRouter aggregator (with sanity guardrails) and re-checked live in your browser; OpenRouter's figures can lag or differ from each provider's official page (linked per provider). Verify against the source before relying on a figure."},"providers":[{"name":"Anthropic","accent":"#d97757","accentDark":"#c86440","source":"https://platform.claude.com/docs/en/about-claude/models/overview","verified":"2026-08-01","models":[{"name":"Claude Fable 5","id":"claude-fable-5","tier":"frontier","input":10,"output":50,"context":"1M","cachedInput":1},{"name":"Claude Opus 4.8","id":"claude-opus-4-8","tier":"flagship","input":5,"output":25,"context":"1M","cachedInput":0.5},{"name":"Claude Sonnet 5","id":"claude-sonnet-5","tier":"workhorse","input":2,"output":10,"context":"1M","note":"Intro pricing $2 / $10 through 2026-08-31","cachedInput":0.2},{"name":"Claude Haiku 4.5","id":"claude-haiku-4-5","tier":"small","input":1,"output":5,"context":"200K","cachedInput":0.1}]},{"name":"OpenAI","accent":"#10a37f","source":"https://developers.openai.com/api/docs/pricing","verified":"2026-08-01","models":[{"name":"GPT-5.6 Sol","id":"gpt-5.6-sol","tier":"flagship","input":5,"output":30,"cachedInput":0.5,"context":"1M"},{"name":"GPT-5.6 Terra","id":"gpt-5.6-terra","tier":"workhorse","input":2.5,"output":15,"cachedInput":0.25,"context":"400K"},{"name":"GPT-5.4 Nano","id":"gpt-5.4-nano","tier":"small","input":0.2,"output":1.25,"cachedInput":0.02,"context":"400K"}]},{"name":"Google","accent":"#4285f4","source":"https://ai.google.dev/gemini-api/docs/pricing","verified":"2026-08-01","models":[{"name":"Gemini 3.1 Pro","id":"gemini-3.1-pro","tier":"flagship","input":2,"output":12,"context":"1M","note":"Prompts >200K tokens: $4 / $18"},{"name":"Gemini 3.5 Flash","id":"gemini-3.5-flash","tier":"flagship","input":1.5,"output":9,"context":"1M","cachedInput":0.15},{"name":"Gemini 2.5 Flash","id":"gemini-2.5-flash","tier":"workhorse","input":0.3,"output":2.5,"cachedInput":0.03,"context":"1M"},{"name":"Gemini 2.5 Flash-Lite","id":"gemini-2.5-flash-lite","tier":"small","input":0.1,"output":0.4,"cachedInput":0.01,"context":"1M"}]},{"name":"xAI","accent":"#e34948","source":"https://x.ai/api","verified":"2026-08-01","models":[{"name":"Grok 4.5","id":"grok-4.5","tier":"flagship","input":2,"output":6,"cachedInput":0.3,"context":"500K"},{"name":"Grok 4.3","id":"grok-4.3","tier":"workhorse","input":1.25,"output":2.5,"cachedInput":0.2,"context":"1M"}]},{"name":"Meta Llama","accent":"#178fb5","source":"https://www.llama.com","verified":"2026-08-01","models":[{"name":"Llama 4 Maverick","id":"llama-4-maverick","tier":"flagship","input":0.2,"output":0.8,"context":"1M"},{"name":"Llama 4 Scout","id":"llama-4-scout","tier":"workhorse","input":0.1,"output":0.3,"context":"1M"},{"name":"Llama 3.3 70B","id":"llama-3.3-70b-instruct","tier":"small","input":0.13,"output":0.4,"context":"128K"}]},{"name":"Mistral AI","accent":"#d95a8a","source":"https://mistral.ai/pricing","verified":"2026-08-01","models":[{"name":"Mistral Large 3","id":"mistral-large-2512","tier":"flagship","input":0.5,"output":1.5,"cachedInput":0.05,"context":"256K"},{"name":"Mistral Medium 3.1","id":"mistral-medium-3.1","tier":"workhorse","input":0.4,"output":2,"cachedInput":0.04,"context":"128K"},{"name":"Mistral Small 4","id":"mistral-small-2603","tier":"small","input":0.15,"output":0.6,"cachedInput":0.015,"context":"256K"}]},{"name":"DeepSeek","accent":"#2f9e44","source":"https://api-docs.deepseek.com/quick_start/pricing","verified":"2026-08-01","models":[{"name":"DeepSeek V4 Pro","id":"deepseek-v4-pro","tier":"flagship","input":0.435,"output":0.87,"context":"1M","cachedInput":0.0036},{"name":"DeepSeek V3.2","id":"deepseek-v3.2","tier":"workhorse","input":0.269,"output":0.4,"cachedInput":0.1345,"context":"164K"},{"name":"DeepSeek V4 Flash","id":"deepseek-v4-flash","tier":"small","input":0.14,"output":0.28,"cachedInput":0.028,"context":"1M"}]},{"name":"Qwen","accent":"#8a5fd0","source":"https://qwenlm.github.io","verified":"2026-08-01","models":[{"name":"Qwen3.7 Max","id":"qwen3.7-max","tier":"flagship","input":1.475,"output":4.425,"cachedInput":0.295,"context":"1M"},{"name":"Qwen3.7 Plus","id":"qwen3.7-plus","tier":"workhorse","input":0.32,"output":1.28,"cachedInput":0.064,"context":"1M"},{"name":"Qwen3.7 Flash","id":"qwen3.7-flash","tier":"small","input":0.03,"output":0.13,"cachedInput":0.006,"context":"1M"}]},{"name":"Moonshot AI","accent":"#eda100","accentDark":"#bc7900","source":"https://platform.moonshot.ai","verified":"2026-08-01","models":[{"name":"Kimi K3","id":"kimi-k3","tier":"flagship","input":3,"output":15,"cachedInput":0.3,"context":"1M"},{"name":"Kimi K2.6","id":"kimi-k2.6","tier":"workhorse","input":0.6,"output":3.41,"cachedInput":0.2,"context":"256K"}]},{"name":"Z.ai","accent":"#b45ec9","source":"https://z.ai","verified":"2026-08-01","models":[{"name":"GLM 5.2","id":"glm-5.2","tier":"flagship","input":0.7601,"output":2.3888,"cachedInput":0.1412,"context":"1M"},{"name":"GLM 4.7","id":"glm-4.7","tier":"workhorse","input":0.4,"output":1.75,"cachedInput":0.08,"context":"200K"},{"name":"GLM 4.7 Flash","id":"glm-4.7-flash","tier":"small","input":0.06,"output":0.4,"cachedInput":0.01,"context":"200K"}]}]};
+  const HISTORY = {"unit":"USD per 1,000,000 tokens","note":"Daily snapshots appended by the update workflow (update.mjs). Keyed by \"Provider:model-id\". Starts sparse and fills in over time; do not fabricate past points.","snapshots":[{"date":"2026-07-15","prices":{"Anthropic:claude-fable-5":{"in":10,"out":50},"Anthropic:claude-opus-4-8":{"in":5,"out":25},"Anthropic:claude-sonnet-5":{"in":2,"out":10},"Anthropic:claude-haiku-4-5":{"in":1,"out":5},"OpenAI:gpt-5.6-sol":{"in":5,"out":30},"OpenAI:gpt-5.6-terra":{"in":2.5,"out":15},"OpenAI:gpt-5.4-nano":{"in":0.2,"out":1.25},"Google:gemini-3.1-pro":{"in":2,"out":12},"Google:gemini-3.5-flash":{"in":1.5,"out":9},"Google:gemini-2.5-flash":{"in":0.3,"out":2.5},"Google:gemini-2.5-flash-lite":{"in":0.1,"out":0.4}}},{"date":"2026-08-01","prices":{"Anthropic:claude-fable-5":{"in":10,"out":50},"Anthropic:claude-opus-4-8":{"in":5,"out":25},"Anthropic:claude-sonnet-5":{"in":2,"out":10},"Anthropic:claude-haiku-4-5":{"in":1,"out":5},"OpenAI:gpt-5.6-sol":{"in":5,"out":30},"OpenAI:gpt-5.6-terra":{"in":2.5,"out":15},"OpenAI:gpt-5.4-nano":{"in":0.2,"out":1.25},"Google:gemini-3.1-pro":{"in":2,"out":12},"Google:gemini-3.5-flash":{"in":1.5,"out":9},"Google:gemini-2.5-flash":{"in":0.3,"out":2.5},"Google:gemini-2.5-flash-lite":{"in":0.1,"out":0.4},"xAI:grok-4.5":{"in":2,"out":6},"xAI:grok-4.3":{"in":1.25,"out":2.5},"Meta Llama:llama-4-maverick":{"in":0.2,"out":0.8},"Meta Llama:llama-4-scout":{"in":0.1,"out":0.3},"Meta Llama:llama-3.3-70b-instruct":{"in":0.13,"out":0.4},"Mistral AI:mistral-large-2512":{"in":0.5,"out":1.5},"Mistral AI:mistral-medium-3.1":{"in":0.4,"out":2},"Mistral AI:mistral-small-2603":{"in":0.15,"out":0.6},"DeepSeek:deepseek-v4-pro":{"in":0.435,"out":0.87},"DeepSeek:deepseek-v3.2":{"in":0.269,"out":0.4},"DeepSeek:deepseek-v4-flash":{"in":0.14,"out":0.28},"Qwen:qwen3.7-max":{"in":1.475,"out":4.425},"Qwen:qwen3.7-plus":{"in":0.32,"out":1.28},"Qwen:qwen3.7-flash":{"in":0.03,"out":0.13},"Moonshot AI:kimi-k3":{"in":3,"out":15},"Moonshot AI:kimi-k2.6":{"in":0.6,"out":3.41},"Z.ai:glm-5.2":{"in":0.7601,"out":2.3888},"Z.ai:glm-4.7":{"in":0.4,"out":1.75},"Z.ai:glm-4.7-flash":{"in":0.06,"out":0.4}}}]};
 
   const $ = (s, r = document) => r.querySelector(s);
   const body = $("#tpt-body");
@@ -286,6 +314,22 @@
 
   // Flatten providers -> rows
   const provSlug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+  // Provider colors come from the data (accent / accentDark), not hardcoded CSS, so a
+  // new provider in pricing.json is fully self-describing. Injected before first render
+  // so var(--c-<slug>) resolves for dots, call-bars, and chart series.
+  (function injectProviderColors() {
+    const decl = (k) => DATA.providers
+      .map(p => `--c-${provSlug(p.name)}:${p[k] || p.accent};`).join("");
+    const light = decl("accent"), dark = decl("accentDark");
+    const el = document.createElement("style");
+    el.textContent = `:root{${light}}`
+      + `@media (prefers-color-scheme:dark){:root{${dark}}}`
+      + `:root[data-theme="light"]{${light}}`
+      + `:root[data-theme="dark"]{${dark}}`;
+    (document.head || document.documentElement).appendChild(el);
+  })();
+
   const rows = DATA.providers.flatMap(p =>
     p.models.map((m, i) => ({
       provider: p.name, pslug: provSlug(p.name), pvar: `var(--c-${provSlug(p.name)})`,
@@ -299,6 +343,10 @@
   const callCost = r => (Number(inEl.value) || 0) / 1e6 * r.input + (Number(outEl.value) || 0) / 1e6 * r.output;
 
   const money = n => "$" + (n >= 1 ? n.toFixed(2) : n.toFixed(2));
+  // Cached-input prices can be sub-cent (e.g. DeepSeek's $0.0036); show enough
+  // precision that a real price never collapses to a misleading "$0.00".
+  const cmoney = n => n >= 0.01 ? "$" + n.toFixed(2)
+    : "$" + n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
   const callFmt = n => {
     const dp = n >= 0.1 ? 3 : n >= 0.01 ? 4 : 5;
     return "$" + n.toFixed(dp);
@@ -325,7 +373,7 @@
       const c = callCost(r);
       const pct = maxCall > 0 ? (c / maxCall * 100) : 0;
       const cached = r.cachedInput != null
-        ? `<span class="tpt-cached">cached in ${money(r.cachedInput)}</span>` : "";
+        ? `<span class="tpt-cached">cached in ${cmoney(r.cachedInput)}</span>` : "";
       return `<tr>
         <td class="l tpt-td-prov" data-label="Provider"><div class="tpt-v"><span class="tpt-badge"><span class="tpt-dot" style="background:${r.pvar}"></span>${r.provider}</span></div></td>
         <td class="l tpt-td-model" data-label="Model"><div class="tpt-v"><div class="tpt-model">${r.name}<span class="tpt-tier">${r.tier}</span></div><div class="tpt-id">${r.id}</div></div></td>
@@ -356,7 +404,7 @@
   });
 
   [inEl, outEl].forEach(el => el.addEventListener("input", () => { render(); renderChart(); renderLegend(); }));
-  document.querySelectorAll(".tpt-chip").forEach(chip => chip.addEventListener("click", () => {
+  document.querySelectorAll(".tpt-presets .tpt-chip").forEach(chip => chip.addEventListener("click", () => {
     inEl.value = chip.dataset.in; outEl.value = chip.dataset.out; render(); renderChart(); renderLegend();
   }));
 
@@ -381,7 +429,9 @@
   const chartHost = $("#tpt-chart-host");
   const legendEl = $("#tpt-legend");
   const hintEl = $("#tpt-hint");
+  const selCountEl = $("#tpt-selcount");
   const rowByKey = new Map(rows.map(r => [r.key, r]));
+  const rowsByProv = DATA.providers.map(p => ({ name: p.name, pvar: `var(--c-${provSlug(p.name)})`, rows: rows.filter(r => r.provider === p.name) }));
   const DASH = ["", "5 4", "1.5 4", "8 3 1.5 3"]; // within-provider variants (secondary encoding)
   const chart = { metric: "input", scale: "log", sel: new Set() };
   DATA.providers.forEach(p => chart.sel.add(`${p.name}:${p.models[0].id}`)); // default: top model per provider
@@ -433,40 +483,83 @@
     yTicks(vMin, vMax, log).forEach(t => { const y = ys(t); svg += `<line class="grid" x1="${m.l}" y1="${y.toFixed(1)}" x2="${W - m.r}" y2="${y.toFixed(1)}"/><text class="tick" x="${m.l - 8}" y="${(y + 3).toFixed(1)}" text-anchor="end">${tickLab(t)}</text>`; });
     dates.forEach((d, i) => { svg += `<text class="tick" x="${xi(i).toFixed(1)}" y="${H - m.b + 16}" text-anchor="middle">${d.slice(5)}</text>`; });
     svg += `<line class="axis" x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}"/>`;
+    const labels = [];
     series.forEach(s => {
       const col = s.row.pvar, dash = DASH[s.row.widx % DASH.length];
       const pts = s.pts.map(p => ({ x: xByDate.get(p.date), y: ys(p.v), v: p.v, date: p.date })).filter(p => p.x != null);
       if (pts.length > 1) svg += `<path class="series" style="stroke:${col}" stroke-dasharray="${dash}" d="M${pts.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")}"/>`;
       pts.forEach((p, i) => { svg += `<circle class="dot" style="fill:${col}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === pts.length - 1 ? 4.5 : 3}"><title>${s.row.name} — ${p.date}: ${fmtVal(p.v)}</title></circle>`; });
       const last = pts[pts.length - 1];
-      svg += `<text class="endlab" x="${(last.x + 8).toFixed(1)}" y="${(last.y + 3.5).toFixed(1)}" style="fill:var(--ink)">${shortName(s.row)}</text>`;
+      labels.push({ x: last.x, dy: last.y, y: last.y, col, text: shortName(s.row) });
+    });
+    // Declutter end-labels: with up to 10 series, labels collide at shared prices.
+    // Keep them in price order but enforce a min vertical gap, nudging up if they
+    // spill past the bottom. A hairline leader ties each label back to its dot.
+    const GAP = 12.5, top = m.t + 4, bot = H - m.b;
+    labels.sort((a, b) => a.dy - b.dy);
+    for (let i = 1; i < labels.length; i++)
+      if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
+    const overflow = labels.length ? labels[labels.length - 1].y - bot : 0;
+    if (overflow > 0) for (const l of labels) l.y = Math.max(top, l.y - overflow);
+    labels.forEach(l => {
+      if (Math.abs(l.y - l.dy) > 1.5)
+        svg += `<line class="lead" x1="${(l.x + 4).toFixed(1)}" y1="${l.dy.toFixed(1)}" x2="${(l.x + 7).toFixed(1)}" y2="${l.y.toFixed(1)}" style="stroke:${l.col}"/>`;
+      svg += `<text class="endlab" x="${(l.x + 8).toFixed(1)}" y="${(l.y + 3.5).toFixed(1)}" style="fill:var(--ink)">${l.text}</text>`;
     });
     svg += `</svg>`;
     chartHost.innerHTML = svg;
   }
 
   function renderLegend() {
-    legendEl.innerHTML = rows.map(r => {
-      const on = chart.sel.has(r.key);
-      const s = seriesFor(r.key);
-      const cur = s.length ? fmtVal(s[s.length - 1].v) : "—";
-      const dash = DASH[r.widx % DASH.length] ? "border-top-style:dashed;" : "";
-      return `<button class="tpt-leg" type="button" data-key="${r.key}" aria-pressed="${on}">`
-        + `<span class="tpt-swatch" style="border-top-color:${r.pvar};${dash}"></span>`
-        + `${r.name}<span class="lv">${cur}</span></button>`;
+    // Grouped by provider: a provider header (toggles all its models) over compact
+    // per-model rows. Keeps 30 series scannable instead of a flat wall of pills.
+    legendEl.innerHTML = rowsByProv.map(g => {
+      const selN = g.rows.filter(r => chart.sel.has(r.key)).length;
+      const state = selN === 0 ? "off" : selN === g.rows.length ? "on" : "some";
+      const models = g.rows.map(r => {
+        const on = chart.sel.has(r.key);
+        const s = seriesFor(r.key);
+        const cur = s.length ? fmtVal(s[s.length - 1].v) : "—";
+        const dash = DASH[r.widx % DASH.length] ? "border-top-style:dashed;" : "";
+        return `<button class="tpt-leg" type="button" data-key="${r.key}" aria-pressed="${on}">`
+          + `<span class="tpt-swatch" style="border-top-color:${r.pvar};${dash}"></span>`
+          + `<span class="tpt-leg-nm">${r.name}</span><span class="lv">${cur}</span></button>`;
+      }).join("");
+      return `<div class="tpt-group" data-state="${state}">`
+        + `<button class="tpt-grouphead" type="button" data-prov="${g.name}" aria-pressed="${state === "on" ? "true" : state === "some" ? "mixed" : "false"}">`
+        + `<span class="tpt-gdot" style="background:${g.pvar};color:${g.pvar}"></span>`
+        + `<span class="tpt-gname">${g.name}</span>`
+        + `<span class="tpt-gcount">${selN}/${g.rows.length}</span></button>`
+        + `<div class="tpt-groupmodels">${models}</div></div>`;
     }).join("");
+    selCountEl.textContent = `${chart.sel.size} of ${rows.length} shown`;
     const n = HISTORY.snapshots.length;
     hintEl.textContent = n <= 1
       ? "History has one snapshot so far — the daily workflow appends a point per day, and the lines grow from here."
-      : `${n} daily snapshots · hover a point for its value · toggle models below to compare.`;
+      : `${n} daily snapshots · click a provider to toggle all its models · hover a point for its value.`;
   }
 
   legendEl.addEventListener("click", e => {
-    const b = e.target.closest(".tpt-leg"); if (!b) return;
-    const k = b.dataset.key;
-    chart.sel.has(k) ? chart.sel.delete(k) : chart.sel.add(k);
+    const model = e.target.closest(".tpt-leg");
+    const head = e.target.closest(".tpt-grouphead");
+    if (model) {
+      const k = model.dataset.key;
+      chart.sel.has(k) ? chart.sel.delete(k) : chart.sel.add(k);
+    } else if (head) {
+      const g = rowsByProv.find(x => x.name === head.dataset.prov);
+      const allOn = g.rows.every(r => chart.sel.has(r.key));
+      g.rows.forEach(r => allOn ? chart.sel.delete(r.key) : chart.sel.add(r.key));
+    } else return;
     renderChart(); renderLegend();
   });
+
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    const p = b.dataset.preset;
+    chart.sel.clear();
+    if (p === "flagships") DATA.providers.forEach(pp => chart.sel.add(`${pp.name}:${pp.models[0].id}`));
+    else if (p === "all") rows.forEach(r => chart.sel.add(r.key));
+    renderChart(); renderLegend();
+  }));
   document.querySelectorAll("[data-metric]").forEach(b => b.addEventListener("click", () => {
     chart.metric = b.dataset.metric;
     document.querySelectorAll("[data-metric]").forEach(x => x.setAttribute("aria-pressed", x === b));

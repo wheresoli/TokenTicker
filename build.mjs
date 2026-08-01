@@ -15,7 +15,8 @@ const inner = read("template.html")
   .replace("__HISTORY_JSON__", JSON.stringify(history));
 
 const title = data.meta.title;
-const desc = `${data.meta.unit} across OpenAI, Anthropic & Google. Updated ${data.meta.updated}.`;
+const n = data.providers.reduce((s, p) => s + p.models.length, 0);
+const desc = `${data.meta.unit} — ${n} models across ${data.providers.length} major Western & Eastern LLM providers. Updated ${data.meta.updated}.`;
 
 const html = `<!doctype html>
 <html lang="en">
@@ -37,5 +38,4 @@ writeFileSync(join(dir, "index.html"), html);
 // leading <title> names the tab/gallery entry — it never renders in-body).
 writeFileSync(join(dir, "llm-token-price-index.html"), `<title>${title}</title>\n${inner}`);
 
-const n = data.providers.reduce((s, p) => s + p.models.length, 0);
 console.log(`Built index.html + llm-token-price-index.html — ${n} models across ${data.providers.length} providers (updated ${data.meta.updated}).`);
