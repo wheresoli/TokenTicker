@@ -342,7 +342,8 @@
   const ctxRank = s => { const n = parseFloat(s); return /M/i.test(s) ? n * 1000 : n; };
   const callCost = r => (Number(inEl.value) || 0) / 1e6 * r.input + (Number(outEl.value) || 0) / 1e6 * r.output;
 
-  const money = n => "$" + (n >= 1 ? n.toFixed(2) : n.toFixed(2));
+  const money = n => n >= 1 ? "$" + n.toFixed(2)
+    : "$" + (n >= 0.1 ? n.toFixed(3) : n >= 0.01 ? n.toFixed(4) : n.toFixed(5)).replace(/0+$/, "").replace(/\.$/, "");
   // Cached-input prices can be sub-cent (e.g. DeepSeek's $0.0036); show enough
   // precision that a real price never collapses to a misleading "$0.00".
   const cmoney = n => n >= 0.01 ? "$" + n.toFixed(2)
