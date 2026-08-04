@@ -28,8 +28,9 @@ Every update appends a `{date, prices}` snapshot to `history.json`. The **Trends
 view graphs any metric (input, output, or cost-per-call) over time, per model, with
 log/linear scale. To keep 30 series manageable, the **Show** row filters by the computed
 [tags](#tags): a tag **combobox** that opens on the best models (Frontier + Flagship), a
-**Repriced** preset (plain-click plots all repriced models; Ctrl/⌘-click narrows the
-current selection to its repriced members), and **Default / All / Clear** — over a
+**Repriced** preset (plain-click plots all repriced models; Ctrl/⌘-click toggles a filter
+that narrows your current selection to its repriced members, tags left intact), and
+**Default / All / Clear** — over a
 provider-**grouped** legend with per-provider select-all and a live "N of 30 shown" count.
 End-labels show **full** model names and declutter into a clean single column; the plot
 **grows taller as you add series**, so nothing overlaps or truncates. The chart is a
@@ -58,11 +59,14 @@ In **Trends**, the **Show** row filters by these tags — `[ Tags ▾ · Reprice
 · All · Clear ]`. The **combobox** is grouped by facet and opens on the best models
 (Frontier + Flagship); each tag is a tri-state toggle that adds or removes its models, so
 selections compose (every Budget model, every Deep-cache model) and combine with the
-per-provider toggles below. **Repriced** plots every model whose input or output actually
-moved across the recorded snapshots (one real signal today, growing as history accrues) —
-or **Ctrl/⌘-click** it (the chip lights up) to instead *narrow your current selection* to
-just its repriced members. **Default** restores the opening plot; **All / Clear** select
-everything or nothing.
+per-provider toggles below. **Repriced** (plain-click) plots every model whose input or
+output actually moved across the recorded snapshots (one real signal today, growing as
+history accrues). **Ctrl/⌘-click** it instead toggles a *filter* layered over your current
+selection: the base selection and its tags stay put — the chip **and** the combobox light
+the same amber, and the filtered-out models show struck-through in the legend — while the
+plot narrows to just the repriced members. It composes, so you can widen the tag selection
+with the filter still on. **Default** restores the opening plot; **All / Clear** select
+everything or nothing (and clear the filter).
 
 ## Files
 

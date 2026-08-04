@@ -208,9 +208,12 @@
 
   /* Divider splits the two chip groups: [ Tags · Repriced ] | [ Default · All · Clear ] */
   .tpt-divider { width: 1px; height: 20px; align-self: center; background: var(--line-strong); margin: 0 2px; }
-  /* Repriced in "filter" affordance — lit while Ctrl/⌘ is held, so a modified click reads
-     as "narrow my selection", distinct from a plain click's "replace with all repriced". */
-  .tpt-chip-repriced.is-filter { background: color-mix(in srgb, #e0952f 26%, var(--panel)); border-color: color-mix(in srgb, #e0952f 60%, var(--line-strong)); color: var(--ink); font-weight: 560; }
+  /* Repriced chip states: `is-arming` = Ctrl/⌘ held (a modified click is queued);
+     `is-filter-on` = the compound filter is active. When on, the chip and the tag combobox
+     light in the SAME amber so the pair reads as one linked filter (tags AND repriced). */
+  .tpt-chip-repriced.is-arming { border-color: color-mix(in srgb, #e0952f 62%, var(--line-strong)); color: var(--ink); }
+  .tpt-chip-repriced.is-filter-on { background: color-mix(in srgb, #e0952f 26%, var(--panel)); border-color: color-mix(in srgb, #e0952f 68%, var(--line-strong)); color: var(--ink); font-weight: 580; box-shadow: 0 0 0 2px color-mix(in srgb, #e0952f 24%, transparent); }
+  .tpt-combo.is-filtered .tpt-combo-btn { border-color: color-mix(in srgb, #e0952f 68%, var(--line-strong)); box-shadow: 0 0 0 2px color-mix(in srgb, #e0952f 24%, transparent); }
 
   .tpt-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; margin-top: 10px; }
   .tpt-group { border: 1px solid var(--line); border-radius: 11px; background: var(--panel); padding: 6px 7px 7px; transition: opacity .15s; }
@@ -227,6 +230,10 @@
   .tpt-leg { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font: inherit; font-size: .76rem; cursor: pointer; background: transparent; border: none; border-radius: 6px; padding: 4px 6px 4px 7px; color: var(--ink); }
   .tpt-leg:hover { background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
   .tpt-leg[aria-pressed="false"] { opacity: .4; }
+  /* Selected but excluded by the Repriced filter: struck through, so the filter's effect
+     is legible in the legend too (not just missing from the plot). */
+  .tpt-leg.tpt-leg-out { opacity: .55; }
+  .tpt-leg.tpt-leg-out .tpt-leg-nm { text-decoration: line-through; }
   .tpt-swatch { width: 16px; border-top: 3px solid var(--faint); border-radius: 2px; flex: none; }
   .tpt-leg-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tpt-leg .lv { margin-left: auto; padding-left: 8px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--faint); font-size: .72rem; }
@@ -330,7 +337,7 @@
           <div class="tpt-combo-panel" id="tpt-combo-panel" role="group" aria-label="Filter models by tag"></div>
         </div>
         <span class="tpt-legchips" role="group" aria-label="Repriced filter">
-          <button class="tpt-chip tpt-chip-repriced" id="tpt-repriced" data-preset="repriced" type="button" title="Click: plot every repriced model. Ctrl/⌘-click: keep only the repriced models within your current selection.">Repriced</button>
+          <button class="tpt-chip tpt-chip-repriced" id="tpt-repriced" data-preset="repriced" type="button" title="Click: plot every repriced model. Ctrl/⌘-click: filter your current selection down to just its repriced models (toggle on/off — tags stay selected).">Repriced</button>
         </span>
         <span class="tpt-divider" aria-hidden="true"></span>
         <span class="tpt-legchips" role="group" aria-label="Quick select">
@@ -562,7 +569,10 @@
   const rowByKey = new Map(rows.map(r => [r.key, r]));
   const rowsByProv = DATA.providers.map(p => ({ name: p.name, pvar: `var(--c-${provSlug(p.name)})`, rows: rows.filter(r => r.provider === p.name) }));
   const DASH = ["", "5 4", "1.5 4", "8 3 1.5 3"]; // within-provider variants (secondary encoding)
-  const chart = { metric: "input", scale: "log", sel: new Set() };
+  // Two-layer selection: `sel` is the base set (what the combobox + legend reflect);
+  // `filterRepriced` is a filter layered on top (Ctrl/⌘-click Repriced) that narrows the
+  // *plot* to repriced models without disturbing the base set — so tags stay visible.
+  const chart = { metric: "input", scale: "log", sel: new Set(), filterRepriced: false };
   // Default plot: the "best" models — everything tagged Frontier or Flagship. Mirrors
   // the tag combobox (which opens with those two tags checked) and the Default chip.
   function selectDefault() {
@@ -571,6 +581,17 @@
   }
   selectDefault();
   const today = new Date().toISOString().slice(0, 10);
+
+  // A model is "repriced" if its input or output moved across the recorded snapshots — a
+  // real computed signal (not a label), starting near-empty and lighting up as history
+  // accrues. Live: after a runtime refresh today's snapshot reflects the feed too.
+  const isRepriced = key => {
+    const seq = HISTORY.snapshots.map(s => s.prices[key]).filter(Boolean);
+    if (seq.length < 2) return false;
+    return seq.some(p => p.in !== seq[0].in) || seq.some(p => p.out !== seq[0].out);
+  };
+  // The plotted keys = base selection, optionally narrowed by the Repriced filter.
+  const plottedKeys = () => chart.filterRepriced ? [...chart.sel].filter(isRepriced) : [...chart.sel];
 
   const metricVal = pr => {
     if (!pr) return null;
@@ -597,9 +618,14 @@
 
   function renderChart() {
     const dates = HISTORY.snapshots.map(s => s.date);
-    const series = [...chart.sel].filter(k => rowByKey.has(k))
+    const series = plottedKeys().filter(k => rowByKey.has(k))
       .map(k => ({ row: rowByKey.get(k), pts: seriesFor(k) })).filter(s => s.pts.length);
-    if (!series.length) { chartHost.innerHTML = `<div class="tpt-empty">Pick one or more models below to plot them.</div>`; return; }
+    if (!series.length) {
+      const msg = chart.filterRepriced && chart.sel.size
+        ? `None of your ${chart.sel.size} selected model${chart.sel.size > 1 ? "s have" : " has"} repriced across the recorded history yet.`
+        : `Pick one or more models below to plot them.`;
+      chartHost.innerHTML = `<div class="tpt-empty">${msg}</div>`; return;
+    }
 
     // Layout adapts to the selection: the right gutter widens to fit the longest *full*
     // model name (no truncation), and the plot grows tall enough that every end-label
@@ -673,10 +699,11 @@
       const state = selN === 0 ? "off" : selN === g.rows.length ? "on" : "some";
       const models = g.rows.map(r => {
         const on = chart.sel.has(r.key);
+        const out = on && chart.filterRepriced && !isRepriced(r.key);   // selected but filtered out
         const s = seriesFor(r.key);
         const cur = s.length ? fmtVal(s[s.length - 1].v) : "—";
         const dash = DASH[r.widx % DASH.length] ? "border-top-style:dashed;" : "";
-        return `<button class="tpt-leg" type="button" data-key="${r.key}" aria-pressed="${on}">`
+        return `<button class="tpt-leg${out ? " tpt-leg-out" : ""}" type="button" data-key="${r.key}" aria-pressed="${on}"${out ? ' title="Filtered out — not repriced"' : ""}>`
           + `<span class="tpt-swatch" style="border-top-color:${r.pvar};${dash}"></span>`
           + `<span class="tpt-leg-nm">${r.name}</span><span class="lv">${cur}</span></button>`;
       }).join("");
@@ -687,11 +714,17 @@
         + `<span class="tpt-gcount">${selN}/${g.rows.length}</span></button>`
         + `<div class="tpt-groupmodels">${models}</div></div>`;
     }).join("");
-    selCountEl.textContent = `${chart.sel.size} of ${rows.length} shown`;
+    const shown = plottedKeys().filter(k => rowByKey.has(k)).length;
+    selCountEl.textContent = chart.filterRepriced
+      ? `${shown} shown · ${chart.sel.size} selected · repriced`
+      : `${chart.sel.size} of ${rows.length} shown`;
     const n = HISTORY.snapshots.length;
-    hintEl.textContent = n <= 1
+    const base = n <= 1
       ? "History has one snapshot so far — the daily workflow appends a point per day, and the lines grow from here."
       : `${n} daily snapshots · click a provider to toggle all its models · hover a point for its value.`;
+    hintEl.textContent = chart.filterRepriced
+      ? `${base} · Repriced filter on — Ctrl/⌘-click Repriced again to clear.`
+      : base;
   }
 
   legendEl.addEventListener("click", e => {
@@ -710,7 +743,8 @@
 
   // ---- Tag combobox ----------------------------------------------------------
   const comboWrap = $("#tpt-combo"), comboBtn = $("#tpt-combo-btn"),
-        comboPanel = $("#tpt-combo-panel"), comboCap = $("#tpt-combo-cap");
+        comboPanel = $("#tpt-combo-panel"), comboCap = $("#tpt-combo-cap"),
+        repricedBtn = $("#tpt-repriced");
   // A tag's state relative to the current plot: all its models shown / some / none.
   const tagState = id => {
     const ks = keysByTag[id]; if (!ks.length) return "off";
@@ -738,10 +772,23 @@
       opt.setAttribute("aria-pressed", st === "on" ? "true" : st === "some" ? "mixed" : "false");
       opt.querySelector(".tpt-tagbox").textContent = st === "on" ? "✓" : st === "some" ? "–" : "";
     });
+    // Caption: name the fully-selected tags, but fall back to a plain count for ad-hoc
+    // picks (so a hand-picked selection never mislabels itself as "Tags").
     const on = [];
     FACETS.forEach(f => f.order.forEach(id => { if (keysByTag[id].length && tagState(id) === "on") on.push(f.def[id].label); }));
-    comboCap.textContent = on.length ? (on.length <= 2 ? on.join(", ") : `${on[0]}, ${on[1]} +${on.length - 2}`) : "Tags";
-    comboWrap.classList.toggle("has-sel", on.length > 0);
+    comboCap.textContent = chart.sel.size === 0 ? "Tags"
+      : chart.sel.size === rows.length ? "All models"
+      : on.length ? (on.length <= 2 ? on.join(", ") : `${on[0]}, ${on[1]} +${on.length - 2}`)
+      : `${chart.sel.size} models`;
+    comboWrap.classList.toggle("has-sel", chart.sel.size > 0);
+    reflectFilter();
+  }
+  // Dual highlight: the Repriced chip and the tag combobox light in the same amber while
+  // the compound filter is active, so "these tags AND repriced" reads as a linked pair.
+  function reflectFilter() {
+    repricedBtn.classList.toggle("is-filter-on", chart.filterRepriced);
+    repricedBtn.setAttribute("aria-pressed", chart.filterRepriced ? "true" : "false");
+    comboWrap.classList.toggle("is-filtered", chart.filterRepriced);
   }
   comboPanel.addEventListener("click", e => {
     const opt = e.target.closest(".tpt-tagopt"); if (!opt) return;
@@ -781,38 +828,31 @@
     }
   });
 
-  // A model is "repriced" if its input or output actually moved across the recorded
-  // snapshots — a real, computed signal (not a label), so it starts near-empty and
-  // lights up as history accrues. Reads live: after a runtime refresh, today's snapshot
-  // reflects the feed, so a same-day move shows here too.
-  const isRepriced = key => {
-    const seq = HISTORY.snapshots.map(s => s.prices[key]).filter(Boolean);
-    if (seq.length < 2) return false;
-    return seq.some(p => p.in !== seq[0].in) || seq.some(p => p.out !== seq[0].out);
-  };
   document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", e => {
     const p = b.dataset.preset;
     if (p === "repriced" && (e.ctrlKey || e.metaKey)) {
-      // Ctrl/⌘-click: narrow the CURRENT selection to just its repriced members.
-      [...chart.sel].forEach(k => { if (!isRepriced(k)) chart.sel.delete(k); });
+      // Ctrl/⌘-click: toggle the Repriced *filter* over the current selection. The base
+      // selection (and the combobox tags) stay put; only the plot narrows.
+      chart.filterRepriced = !chart.filterRepriced;
     } else if (p === "repriced") {
+      // Plain click: hard-select every repriced model, dropping any active filter.
+      chart.filterRepriced = false;
       chart.sel.clear(); rows.forEach(r => { if (isRepriced(r.key)) chart.sel.add(r.key); });
     } else if (p === "default") {
-      selectDefault();
+      chart.filterRepriced = false; selectDefault();
     } else if (p === "all") {
-      chart.sel.clear(); rows.forEach(r => chart.sel.add(r.key));
+      chart.filterRepriced = false; chart.sel.clear(); rows.forEach(r => chart.sel.add(r.key));
     } else if (p === "none") {
-      chart.sel.clear();
+      chart.filterRepriced = false; chart.sel.clear();
     }
     renderChart(); renderLegend(); syncCombo();
   }));
-  // Light the Repriced chip while a modifier is held, signalling its "filter my selection"
-  // mode before the click lands. Cleared on release or when the window loses focus.
-  const repricedBtn = $("#tpt-repriced");
-  const setFilterHint = e => repricedBtn.classList.toggle("is-filter", e.ctrlKey || e.metaKey);
-  document.addEventListener("keydown", setFilterHint);
-  document.addEventListener("keyup", setFilterHint);
-  window.addEventListener("blur", () => repricedBtn.classList.remove("is-filter"));
+  // "Arm" the Repriced chip while Ctrl/⌘ is held, so a modified click reads as "filter"
+  // before it lands — distinct from the persistent lit state once the filter is on.
+  const setArm = e => repricedBtn.classList.toggle("is-arming", e.ctrlKey || e.metaKey);
+  document.addEventListener("keydown", setArm);
+  document.addEventListener("keyup", setArm);
+  window.addEventListener("blur", () => repricedBtn.classList.remove("is-arming"));
   document.querySelectorAll("[data-metric]").forEach(b => b.addEventListener("click", () => {
     chart.metric = b.dataset.metric;
     document.querySelectorAll("[data-metric]").forEach(x => x.setAttribute("aria-pressed", x === b));
