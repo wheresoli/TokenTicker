@@ -51,7 +51,7 @@ for its exact rule. The facets and cut-offs:
 |---|---|
 | **Tier** | Frontier · Flagship · Workhorse · Small — curated lineup position |
 | **Price band** | Premium ≥ $15 · Standard $4–15 · Value $1–4 · Budget < $1 — blended input+output, $/1M |
-| **Context** | 1M ≥ 1M · Long 200K–1M · Standard < 200K |
+| **Context** | 1M ctx ≥ 1M · Long 200K–1M · Standard < 200K — context window (tokens) |
 | **Cache** | Deep ≥ 10× · Some < 10× · None — cached-input discount vs fresh input |
 | **Output ratio** | Steep ≥ 5× · Moderate 3–5× · Flat < 3× — output price ÷ input price |
 
