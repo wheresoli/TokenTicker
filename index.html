@@ -126,7 +126,18 @@
   .tpt-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .tpt-num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
   .tpt-cached { display: block; font-size: .68rem; color: var(--faint); margin-top: 2px; }
-  .tpt-tier { display: inline-block; font-size: .68rem; color: var(--muted); background: var(--bar); border-radius: 5px; padding: 1px 6px; margin-left: 8px; vertical-align: middle; }
+  /* Rigorous, computed tags — a wrapping row of compact pills under the model name.
+     Every value is derived from the price/context data (FACETS + tagPills below), so a
+     tag can't drift from the number it describes. The price band carries a subtle
+     cheap→green / pricey→warm tint (this is a price index); other facets stay neutral so
+     the row reads calmly. Each pill's title spells out the exact cut-off. */
+  .tpt-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0 2px; }
+  .tpt-tag { display: inline-flex; align-items: center; font-size: .64rem; line-height: 1.6; color: var(--muted); background: var(--bar); border-radius: 5px; padding: 0 6px; white-space: nowrap; }
+  .tpt-tag-tier { color: var(--ink); font-weight: 640; }
+  .tpt-tag-price { color: var(--ink); }
+  .tpt-tag-price[data-band="premium"] { background: color-mix(in srgb, #d97757 24%, var(--bar)); }
+  .tpt-tag-price[data-band="value"]   { background: color-mix(in srgb, #37a862 18%, var(--bar)); }
+  .tpt-tag-price[data-band="budget"]  { background: color-mix(in srgb, #37a862 30%, var(--bar)); }
   .tpt-ctx { color: var(--muted); font-family: var(--mono); font-size: .82rem; }
 
   .tpt-cell-call { position: relative; }
@@ -174,6 +185,36 @@
   .tpt-legchips { display: inline-flex; gap: 6px; }
   .tpt-selcount { margin-left: auto; font-size: .74rem; color: var(--faint); font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
+  /* Tag combobox: a popover of the computed tags grouped by facet. Each tag is a
+     tri-state toggle (on / some / off vs the current plot) that adds or removes its
+     models — same interaction as the provider headers, so the two selectors compose. */
+  .tpt-combo { position: relative; display: inline-flex; }
+  .tpt-combo-btn { font: inherit; font-size: .76rem; color: var(--ink); cursor: pointer; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 11px; display: inline-flex; align-items: center; gap: 6px; max-width: 16rem; }
+  .tpt-combo-btn:hover { border-color: var(--faint); }
+  .tpt-combo.has-sel .tpt-combo-btn { border-color: var(--faint); font-weight: 560; }
+  .tpt-combo-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpt-caret { color: var(--faint); font-size: .7rem; }
+  .tpt-combo-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; display: none; width: min(88vw, 520px); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 14px; }
+  .tpt-combo.open .tpt-combo-panel { display: block; }
+  .tpt-combo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px 16px; }
+  .tpt-facet-name { font-size: .66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 600; margin: 0 0 3px; }
+  .tpt-tagopt { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; font: inherit; font-size: .78rem; cursor: pointer; background: transparent; border: none; border-radius: 6px; padding: 3px 5px; color: var(--ink); }
+  .tpt-tagopt:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .tpt-tagbox { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--line-strong); flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; color: var(--panel); }
+  .tpt-tagopt[data-state="on"] .tpt-tagbox { background: var(--ink); border-color: var(--ink); }
+  .tpt-tagopt[data-state="some"] .tpt-tagbox { background: var(--faint); border-color: var(--faint); }
+  .tpt-tagopt-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tpt-tagcount { margin-left: auto; padding-left: 6px; font-size: .68rem; color: var(--faint); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* Divider splits the two chip groups: [ Tags · Repriced ] | [ Default · All · Clear ] */
+  .tpt-divider { width: 1px; height: 20px; align-self: center; background: var(--line-strong); margin: 0 2px; }
+  /* Repriced chip states: `is-arming` = Ctrl/⌘ held (a modified click is queued);
+     `is-filter-on` = the compound filter is active. When on, the chip and the tag combobox
+     light in the SAME amber so the pair reads as one linked filter (tags AND repriced). */
+  .tpt-chip-repriced.is-arming { border-color: color-mix(in srgb, #e0952f 62%, var(--line-strong)); color: var(--ink); }
+  .tpt-chip-repriced.is-filter-on { background: color-mix(in srgb, #e0952f 26%, var(--panel)); border-color: color-mix(in srgb, #e0952f 68%, var(--line-strong)); color: var(--ink); font-weight: 580; box-shadow: 0 0 0 2px color-mix(in srgb, #e0952f 24%, transparent); }
+  .tpt-combo.is-filtered .tpt-combo-btn { border-color: color-mix(in srgb, #e0952f 68%, var(--line-strong)); box-shadow: 0 0 0 2px color-mix(in srgb, #e0952f 24%, transparent); }
+
   .tpt-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; margin-top: 10px; }
   .tpt-group { border: 1px solid var(--line); border-radius: 11px; background: var(--panel); padding: 6px 7px 7px; transition: opacity .15s; }
   .tpt-group[data-state="off"] { opacity: .6; }
@@ -189,6 +230,10 @@
   .tpt-leg { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font: inherit; font-size: .76rem; cursor: pointer; background: transparent; border: none; border-radius: 6px; padding: 4px 6px 4px 7px; color: var(--ink); }
   .tpt-leg:hover { background: color-mix(in srgb, var(--ink) 4.5%, transparent); }
   .tpt-leg[aria-pressed="false"] { opacity: .4; }
+  /* Selected but excluded by the Repriced filter: struck through, so the filter's effect
+     is legible in the legend too (not just missing from the plot). */
+  .tpt-leg.tpt-leg-out { opacity: .55; }
+  .tpt-leg.tpt-leg-out .tpt-leg-nm { text-decoration: line-through; }
   .tpt-swatch { width: 16px; border-top: 3px solid var(--faint); border-radius: 2px; flex: none; }
   .tpt-leg-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tpt-leg .lv { margin-left: auto; padding-left: 8px; font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--faint); font-size: .72rem; }
@@ -285,8 +330,18 @@
       <div id="tpt-chart-host"></div>
       <div class="tpt-legbar">
         <span class="tpt-mini-label">Show</span>
+        <div class="tpt-combo" id="tpt-combo">
+          <button class="tpt-combo-btn" id="tpt-combo-btn" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="tpt-combo-cap" id="tpt-combo-cap">Tags</span><span class="tpt-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="tpt-combo-panel" id="tpt-combo-panel" role="group" aria-label="Filter models by tag"></div>
+        </div>
+        <span class="tpt-legchips" role="group" aria-label="Repriced filter">
+          <button class="tpt-chip tpt-chip-repriced" id="tpt-repriced" data-preset="repriced" type="button" title="Click: plot every repriced model. Ctrl/⌘-click: filter your current selection down to just its repriced models (toggle on/off — tags stay selected).">Repriced</button>
+        </span>
+        <span class="tpt-divider" aria-hidden="true"></span>
         <span class="tpt-legchips" role="group" aria-label="Quick select">
-          <button class="tpt-chip" data-preset="flagships" type="button">Flagships</button>
+          <button class="tpt-chip" data-preset="default" type="button" title="Reset to the default plot — the best models (Frontier + Flagship)">Default</button>
           <button class="tpt-chip" data-preset="all" type="button">All</button>
           <button class="tpt-chip" data-preset="none" type="button">Clear</button>
         </span>
@@ -353,6 +408,86 @@
     return "$" + n.toFixed(dp);
   };
 
+  // ---- Rigorous, computed tags -------------------------------------------------
+  // Every tag is derived from the price/context numbers, so it can't drift from the
+  // data: change a price and its band / output-ratio / cache tag recompute. The lone
+  // exception is `tier`, which is the model's position in its provider's own lineup.
+  // Each value's title spells out the exact cut-off (also documented in the README).
+  const blended = r => r.input + r.output;                       // transparent $/1M proxy
+  const outRatio = r => r.input > 0 ? r.output / r.input : 0;
+  const cacheX = r => (r.cachedInput != null && r.cachedInput > 0) ? r.input / r.cachedInput : null;
+  const trim1 = n => (Math.round(n * 10) / 10).toString();       // 5, 6.3 — drop trailing .0
+
+  const FACETS = [
+    {
+      key: "tier", name: "Tier", order: ["frontier", "flagship", "workhorse", "small"],
+      def: {
+        frontier:  { label: "Frontier",  title: "Tier — the provider's most capable / newest model" },
+        flagship:  { label: "Flagship",  title: "Tier — primary top-line model" },
+        workhorse: { label: "Workhorse", title: "Tier — balanced cost/quality default" },
+        small:     { label: "Small",     title: "Tier — smallest / fastest in the family" },
+      },
+      of: r => r.tier,
+    },
+    {
+      key: "price", name: "Price band", order: ["premium", "standard", "value", "budget"],
+      def: {
+        premium:  { label: "Premium",  title: "Price band — blended input+output ≥ $15 / 1M" },
+        standard: { label: "Standard", title: "Price band — blended input+output $4–15 / 1M" },
+        value:    { label: "Value",    title: "Price band — blended input+output $1–4 / 1M" },
+        budget:   { label: "Budget",   title: "Price band — blended input+output < $1 / 1M" },
+      },
+      of: r => { const b = blended(r); return b >= 15 ? "premium" : b >= 4 ? "standard" : b >= 1 ? "value" : "budget"; },
+    },
+    {
+      key: "ctx", name: "Context", order: ["ctx1m", "ctxlong", "ctxstd"],
+      def: {
+        ctx1m:   { label: "1M ctx",       title: "Context window ≥ 1M tokens" },
+        ctxlong: { label: "Long ctx",     title: "Context window 200K – 1M tokens" },
+        ctxstd:  { label: "Standard ctx", title: "Context window < 200K tokens" },
+      },
+      of: r => { const k = ctxRank(r.context); return k >= 1000 ? "ctx1m" : k >= 200 ? "ctxlong" : "ctxstd"; },
+    },
+    {
+      key: "cache", name: "Cache", order: ["cachedeep", "cachesome", "cachenone"],
+      def: {
+        cachedeep: { label: "Deep cache", title: "Cached-input discount ≥ 10× cheaper than fresh input" },
+        cachesome: { label: "Some cache", title: "Cached-input discount present but < 10×" },
+        cachenone: { label: "No cache",   title: "No cached-input price published" },
+      },
+      of: r => { const x = cacheX(r); return x == null ? "cachenone" : x >= 10 ? "cachedeep" : "cachesome"; },
+      badge: r => { const x = cacheX(r); return x == null ? "no cache" : `${Math.round(x)}× cached`; },
+    },
+    {
+      key: "out", name: "Output ratio", order: ["outsteep", "outmod", "outflat"],
+      def: {
+        outsteep: { label: "Steep output",    title: "Output priced ≥ 5× input" },
+        outmod:   { label: "Moderate output", title: "Output priced 3 – 5× input" },
+        outflat:  { label: "Flat output",     title: "Output priced < 3× input" },
+      },
+      of: r => { const q = outRatio(r); return q >= 5 ? "outsteep" : q >= 3 ? "outmod" : "outflat"; },
+      badge: r => `${trim1(outRatio(r))}:1 out`,
+    },
+  ];
+
+  // Precomputed per-row tag ids + reverse index (tag id -> row keys), refreshed after a
+  // live price update so the pills and combobox always reflect the numbers on screen.
+  const keysByTag = {};
+  function recomputeTags() {
+    rows.forEach(r => { r.tags = FACETS.map(f => f.of(r)); });
+    FACETS.forEach(f => f.order.forEach(id => keysByTag[id] = []));
+    rows.forEach(r => r.tags.forEach(id => keysByTag[id].push(r.key)));
+  }
+  recomputeTags();
+
+  const tagPills = r => FACETS.map((f, i) => {
+    const id = r.tags[i], d = f.def[id];
+    const txt = f.badge ? f.badge(r) : d.label;
+    const cls = "tpt-tag" + (f.key === "tier" ? " tpt-tag-tier" : f.key === "price" ? " tpt-tag-price" : "");
+    const band = f.key === "price" ? ` data-band="${id}"` : "";
+    return `<span class="${cls}"${band} title="${d.title}">${txt}</span>`;
+  }).join("");
+
   let sort = { k: "call", dir: "asc" };
 
   function valueFor(r, k) {
@@ -377,7 +512,7 @@
         ? `<span class="tpt-cached">cached in ${cmoney(r.cachedInput)}</span>` : "";
       return `<tr>
         <td class="l tpt-td-prov" data-label="Provider"><div class="tpt-v"><span class="tpt-badge"><span class="tpt-dot" style="background:${r.pvar}"></span>${r.provider}</span></div></td>
-        <td class="l tpt-td-model" data-label="Model"><div class="tpt-v"><div class="tpt-model">${r.name}<span class="tpt-tier">${r.tier}</span></div><div class="tpt-id">${r.id}</div></div></td>
+        <td class="l tpt-td-model" data-label="Model"><div class="tpt-v"><div class="tpt-model">${r.name}</div><div class="tpt-tags">${tagPills(r)}</div><div class="tpt-id">${r.id}</div></div></td>
         <td data-label="Input $/1M"><div class="tpt-v"><span class="tpt-num">${money(r.input)}</span>${cached}</div></td>
         <td data-label="Output $/1M"><div class="tpt-v"><span class="tpt-num">${money(r.output)}</span></div></td>
         <td class="tpt-cell-call" data-label="Cost / call"><span class="tpt-callbar" style="width:${pct}%;background:${r.pvar}"></span><div class="tpt-v"><span class="tpt-callval">${callFmt(c)}</span></div></td>
@@ -434,9 +569,29 @@
   const rowByKey = new Map(rows.map(r => [r.key, r]));
   const rowsByProv = DATA.providers.map(p => ({ name: p.name, pvar: `var(--c-${provSlug(p.name)})`, rows: rows.filter(r => r.provider === p.name) }));
   const DASH = ["", "5 4", "1.5 4", "8 3 1.5 3"]; // within-provider variants (secondary encoding)
-  const chart = { metric: "input", scale: "log", sel: new Set() };
-  DATA.providers.forEach(p => chart.sel.add(`${p.name}:${p.models[0].id}`)); // default: top model per provider
+  // Two-layer selection: `sel` is the base set (what the combobox + legend reflect);
+  // `filterRepriced` is a filter layered on top (Ctrl/⌘-click Repriced) that narrows the
+  // *plot* to repriced models without disturbing the base set — so tags stay visible.
+  const chart = { metric: "input", scale: "log", sel: new Set(), filterRepriced: false };
+  // Default plot: the "best" models — everything tagged Frontier or Flagship. Mirrors
+  // the tag combobox (which opens with those two tags checked) and the Default chip.
+  function selectDefault() {
+    chart.sel.clear();
+    rows.forEach(r => { if (r.tier === "frontier" || r.tier === "flagship") chart.sel.add(r.key); });
+  }
+  selectDefault();
   const today = new Date().toISOString().slice(0, 10);
+
+  // A model is "repriced" if its input or output moved across the recorded snapshots — a
+  // real computed signal (not a label), starting near-empty and lighting up as history
+  // accrues. Live: after a runtime refresh today's snapshot reflects the feed too.
+  const isRepriced = key => {
+    const seq = HISTORY.snapshots.map(s => s.prices[key]).filter(Boolean);
+    if (seq.length < 2) return false;
+    return seq.some(p => p.in !== seq[0].in) || seq.some(p => p.out !== seq[0].out);
+  };
+  // The plotted keys = base selection, optionally narrowed by the Repriced filter.
+  const plottedKeys = () => chart.filterRepriced ? [...chart.sel].filter(isRepriced) : [...chart.sel];
 
   const metricVal = pr => {
     if (!pr) return null;
@@ -453,7 +608,6 @@
     ? "$" + (v >= 0.1 ? v.toFixed(3) : v >= 0.01 ? v.toFixed(4) : v.toFixed(5))
     : "$" + v.toFixed(2);
   const tickLab = t => t >= 1 ? "$" + (Number.isInteger(t) ? t : +t.toFixed(1)) : "$" + (+t.toFixed(t >= 0.1 ? 1 : 2));
-  const shortName = r => r.name.length > 15 ? r.name.slice(0, 14) + "…" : r.name;
   const niceStep = raw => { const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; };
   function yTicks(min, max, log) {
     if (log) { const out = []; for (let k = Math.floor(Math.log10(min)); k <= Math.ceil(Math.log10(max)); k++) out.push(Math.pow(10, k)); return out.filter(t => t >= min * 0.999 && t <= max * 1.001); }
@@ -463,12 +617,29 @@
   }
 
   function renderChart() {
-    const W = 760, H = 340, m = { t: 14, r: 108, b: 30, l: 50 };
-    const pw = W - m.l - m.r, ph = H - m.t - m.b;
     const dates = HISTORY.snapshots.map(s => s.date);
-    const series = [...chart.sel].filter(k => rowByKey.has(k))
+    const series = plottedKeys().filter(k => rowByKey.has(k))
       .map(k => ({ row: rowByKey.get(k), pts: seriesFor(k) })).filter(s => s.pts.length);
-    if (!series.length) { chartHost.innerHTML = `<div class="tpt-empty">Pick one or more models below to plot them.</div>`; return; }
+    if (!series.length) {
+      const msg = chart.filterRepriced && chart.sel.size
+        ? `None of your ${chart.sel.size} selected model${chart.sel.size > 1 ? "s have" : " has"} repriced across the recorded history yet.`
+        : `Pick one or more models below to plot them.`;
+      chartHost.innerHTML = `<div class="tpt-empty">${msg}</div>`; return;
+    }
+
+    // Layout adapts to the selection: the right gutter widens to fit the longest *full*
+    // model name (no truncation), and the plot grows tall enough that every end-label
+    // gets its own row — so 30 series read as a clean list instead of a pile of "…".
+    const N = series.length;
+    const LINE = 13;                                                     // label row height
+    const longest = Math.max(...series.map(s => s.row.name.length));
+    const W = 760, m = {
+      t: 14, b: 30, l: 50,
+      r: Math.min(232, Math.max(96, Math.round(longest * 6.35) + 34)),   // dot + name + pad
+    };
+    const ph = Math.max(300, N * LINE + 16);
+    const H = m.t + m.b + ph;
+    const pw = W - m.l - m.r;
 
     const vals = series.flatMap(s => s.pts.map(p => p.v));
     let vMin = Math.min(...vals), vMax = Math.max(...vals);
@@ -498,12 +669,13 @@
       if (pts.length > 1) svg += `<path class="series" style="stroke:${col}" stroke-dasharray="${dash}" d="M${pts.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")}"/>`;
       pts.forEach((p, i) => { svg += `<circle class="dot" style="fill:${col}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === pts.length - 1 ? 4.5 : 3}"><title>${s.row.name} — ${p.date}: ${fmtVal(p.v)}</title></circle>`; });
       const last = pts[pts.length - 1];
-      labels.push({ x: last.x, dy: last.y, y: last.y, col, text: shortName(s.row) });
+      labels.push({ x: last.x, dy: last.y, y: last.y, col, text: s.row.name });
     });
-    // Declutter end-labels: with up to 10 series, labels collide at shared prices.
-    // Keep them in price order but enforce a min vertical gap, nudging up if they
-    // spill past the bottom. A hairline leader ties each label back to its dot.
-    const GAP = 12.5, top = m.t + 4, bot = H - m.b;
+    // Declutter end-labels: they collide wherever series share a price. Keep them in
+    // price order but enforce a one-row min gap, nudging the stack up if it spills past
+    // the bottom (the plot was sized so the whole column fits). A hairline leader + a
+    // color bullet tie each label back to its line.
+    const GAP = LINE, top = m.t + 4, bot = H - m.b;
     labels.sort((a, b) => a.dy - b.dy);
     for (let i = 1; i < labels.length; i++)
       if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
@@ -511,8 +683,9 @@
     if (overflow > 0) for (const l of labels) l.y = Math.max(top, l.y - overflow);
     labels.forEach(l => {
       if (Math.abs(l.y - l.dy) > 1.5)
-        svg += `<line class="lead" x1="${(l.x + 4).toFixed(1)}" y1="${l.dy.toFixed(1)}" x2="${(l.x + 7).toFixed(1)}" y2="${l.y.toFixed(1)}" style="stroke:${l.col}"/>`;
-      svg += `<text class="endlab" x="${(l.x + 8).toFixed(1)}" y="${(l.y + 3.5).toFixed(1)}" style="fill:var(--ink)">${l.text}</text>`;
+        svg += `<line class="lead" x1="${(l.x + 4).toFixed(1)}" y1="${l.dy.toFixed(1)}" x2="${(l.x + 8).toFixed(1)}" y2="${l.y.toFixed(1)}" style="stroke:${l.col}"/>`;
+      svg += `<circle class="enddot" cx="${(l.x + 11).toFixed(1)}" cy="${l.y.toFixed(1)}" r="2.7" style="fill:${l.col}"/>`;
+      svg += `<text class="endlab" x="${(l.x + 17).toFixed(1)}" y="${(l.y + 3.4).toFixed(1)}" style="fill:var(--ink)">${l.text}</text>`;
     });
     svg += `</svg>`;
     chartHost.innerHTML = svg;
@@ -526,10 +699,11 @@
       const state = selN === 0 ? "off" : selN === g.rows.length ? "on" : "some";
       const models = g.rows.map(r => {
         const on = chart.sel.has(r.key);
+        const out = on && chart.filterRepriced && !isRepriced(r.key);   // selected but filtered out
         const s = seriesFor(r.key);
         const cur = s.length ? fmtVal(s[s.length - 1].v) : "—";
         const dash = DASH[r.widx % DASH.length] ? "border-top-style:dashed;" : "";
-        return `<button class="tpt-leg" type="button" data-key="${r.key}" aria-pressed="${on}">`
+        return `<button class="tpt-leg${out ? " tpt-leg-out" : ""}" type="button" data-key="${r.key}" aria-pressed="${on}"${out ? ' title="Filtered out — not repriced"' : ""}>`
           + `<span class="tpt-swatch" style="border-top-color:${r.pvar};${dash}"></span>`
           + `<span class="tpt-leg-nm">${r.name}</span><span class="lv">${cur}</span></button>`;
       }).join("");
@@ -540,11 +714,17 @@
         + `<span class="tpt-gcount">${selN}/${g.rows.length}</span></button>`
         + `<div class="tpt-groupmodels">${models}</div></div>`;
     }).join("");
-    selCountEl.textContent = `${chart.sel.size} of ${rows.length} shown`;
+    const shown = plottedKeys().filter(k => rowByKey.has(k)).length;
+    selCountEl.textContent = chart.filterRepriced
+      ? `${shown} shown · ${chart.sel.size} selected · repriced`
+      : `${chart.sel.size} of ${rows.length} shown`;
     const n = HISTORY.snapshots.length;
-    hintEl.textContent = n <= 1
+    const base = n <= 1
       ? "History has one snapshot so far — the daily workflow appends a point per day, and the lines grow from here."
       : `${n} daily snapshots · click a provider to toggle all its models · hover a point for its value.`;
+    hintEl.textContent = chart.filterRepriced
+      ? `${base} · Repriced filter on — Ctrl/⌘-click Repriced again to clear.`
+      : base;
   }
 
   legendEl.addEventListener("click", e => {
@@ -558,16 +738,121 @@
       const allOn = g.rows.every(r => chart.sel.has(r.key));
       g.rows.forEach(r => allOn ? chart.sel.delete(r.key) : chart.sel.add(r.key));
     } else return;
-    renderChart(); renderLegend();
+    renderChart(); renderLegend(); syncCombo();
   });
 
-  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  // ---- Tag combobox ----------------------------------------------------------
+  const comboWrap = $("#tpt-combo"), comboBtn = $("#tpt-combo-btn"),
+        comboPanel = $("#tpt-combo-panel"), comboCap = $("#tpt-combo-cap"),
+        repricedBtn = $("#tpt-repriced");
+  // A tag's state relative to the current plot: all its models shown / some / none.
+  const tagState = id => {
+    const ks = keysByTag[id]; if (!ks.length) return "off";
+    let on = 0; for (const k of ks) if (chart.sel.has(k)) on++;
+    return on === 0 ? "off" : on === ks.length ? "on" : "some";
+  };
+  function buildCombo() {
+    comboPanel.innerHTML = `<div class="tpt-combo-grid">` + FACETS.map(f =>
+      `<div class="tpt-facetcol"><p class="tpt-facet-name">${f.name}</p>` +
+      f.order.filter(id => keysByTag[id].length).map(id =>
+        `<button class="tpt-tagopt" type="button" data-tag="${id}" title="${f.def[id].title}">`
+        + `<span class="tpt-tagbox" aria-hidden="true"></span>`
+        + `<span class="tpt-tagopt-nm">${f.def[id].label}</span>`
+        + `<span class="tpt-tagcount">${keysByTag[id].length}</span></button>`
+      ).join("") + `</div>`
+    ).join("") + `</div>`;
+    syncCombo();
+  }
+  // Update states + caption in place (never re-innerHTML on click, so the clicked node
+  // stays in the DOM and the outside-click closer doesn't fire on it).
+  function syncCombo() {
+    comboPanel.querySelectorAll(".tpt-tagopt").forEach(opt => {
+      const st = tagState(opt.dataset.tag);
+      opt.dataset.state = st;
+      opt.setAttribute("aria-pressed", st === "on" ? "true" : st === "some" ? "mixed" : "false");
+      opt.querySelector(".tpt-tagbox").textContent = st === "on" ? "✓" : st === "some" ? "–" : "";
+    });
+    // Caption: name the fully-selected tags, but fall back to a plain count for ad-hoc
+    // picks (so a hand-picked selection never mislabels itself as "Tags").
+    const on = [];
+    FACETS.forEach(f => f.order.forEach(id => { if (keysByTag[id].length && tagState(id) === "on") on.push(f.def[id].label); }));
+    comboCap.textContent = chart.sel.size === 0 ? "Tags"
+      : chart.sel.size === rows.length ? "All models"
+      : on.length ? (on.length <= 2 ? on.join(", ") : `${on[0]}, ${on[1]} +${on.length - 2}`)
+      : `${chart.sel.size} models`;
+    comboWrap.classList.toggle("has-sel", chart.sel.size > 0);
+    reflectFilter();
+  }
+  // Dual highlight: the Repriced chip and the tag combobox light in the same amber while
+  // the compound filter is active, so "these tags AND repriced" reads as a linked pair.
+  function reflectFilter() {
+    repricedBtn.classList.toggle("is-filter-on", chart.filterRepriced);
+    repricedBtn.setAttribute("aria-pressed", chart.filterRepriced ? "true" : "false");
+    comboWrap.classList.toggle("is-filtered", chart.filterRepriced);
+  }
+  comboPanel.addEventListener("click", e => {
+    const opt = e.target.closest(".tpt-tagopt"); if (!opt) return;
+    const ks = keysByTag[opt.dataset.tag];
+    const allOn = ks.every(k => chart.sel.has(k));
+    ks.forEach(k => allOn ? chart.sel.delete(k) : chart.sel.add(k));
+    renderChart(); renderLegend(); syncCombo();
+  });
+  // Keep the popover on-screen: it's anchored to the button (near the left), so on a
+  // narrow viewport a full-width panel would spill off the right. Pick the viewport x
+  // that keeps it within an 8px margin, then express it relative to the anchor.
+  function positionPanel() {
+    const pad = 8;
+    comboPanel.style.left = "0px";
+    const origin = comboWrap.getBoundingClientRect().left;   // panel's offsetParent edge
+    const pw = comboPanel.offsetWidth;
+    const vw = document.documentElement.clientWidth;
+    let x = origin;                                          // ideal: aligned under the button
+    if (x + pw > vw - pad) x = vw - pad - pw;                // pull in from the right edge
+    if (x < pad) x = pad;                                    // but never past the left edge
+    comboPanel.style.left = (x - origin) + "px";
+  }
+  comboBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    const open = comboWrap.classList.toggle("open");
+    comboBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) positionPanel();
+  });
+  document.addEventListener("click", e => {
+    if (comboWrap.classList.contains("open") && !comboWrap.contains(e.target)) {
+      comboWrap.classList.remove("open"); comboBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && comboWrap.classList.contains("open")) {
+      comboWrap.classList.remove("open"); comboBtn.setAttribute("aria-expanded", "false"); comboBtn.focus();
+    }
+  });
+
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", e => {
     const p = b.dataset.preset;
-    chart.sel.clear();
-    if (p === "flagships") DATA.providers.forEach(pp => chart.sel.add(`${pp.name}:${pp.models[0].id}`));
-    else if (p === "all") rows.forEach(r => chart.sel.add(r.key));
-    renderChart(); renderLegend();
+    if (p === "repriced" && (e.ctrlKey || e.metaKey)) {
+      // Ctrl/⌘-click: toggle the Repriced *filter* over the current selection. The base
+      // selection (and the combobox tags) stay put; only the plot narrows.
+      chart.filterRepriced = !chart.filterRepriced;
+    } else if (p === "repriced") {
+      // Plain click: hard-select every repriced model, dropping any active filter.
+      chart.filterRepriced = false;
+      chart.sel.clear(); rows.forEach(r => { if (isRepriced(r.key)) chart.sel.add(r.key); });
+    } else if (p === "default") {
+      chart.filterRepriced = false; selectDefault();
+    } else if (p === "all") {
+      chart.filterRepriced = false; chart.sel.clear(); rows.forEach(r => chart.sel.add(r.key));
+    } else if (p === "none") {
+      chart.filterRepriced = false; chart.sel.clear();
+    }
+    renderChart(); renderLegend(); syncCombo();
   }));
+  // "Arm" the Repriced chip while Ctrl/⌘ is held, so a modified click reads as "filter"
+  // before it lands — distinct from the persistent lit state once the filter is on.
+  const setArm = e => repricedBtn.classList.toggle("is-arming", e.ctrlKey || e.metaKey);
+  document.addEventListener("keydown", setArm);
+  document.addEventListener("keyup", setArm);
+  window.addEventListener("blur", () => repricedBtn.classList.remove("is-arming"));
   document.querySelectorAll("[data-metric]").forEach(b => b.addEventListener("click", () => {
     chart.metric = b.dataset.metric;
     document.querySelectorAll("[data-metric]").forEach(x => x.setAttribute("aria-pressed", x === b));
@@ -612,7 +897,8 @@
         const prices = {}; rows.forEach(r => prices[r.key] = { in: r.input, out: r.output });
         const at = HISTORY.snapshots.findIndex(s => s.date === today);
         if (at >= 0) HISTORY.snapshots[at] = { date: today, prices }; else HISTORY.snapshots.push({ date: today, prices });
-        render(); renderChart();
+        recomputeTags();            // live prices can shift a band / ratio / cache tag
+        render(); renderChart(); buildCombo();
         status.classList.add("is-live"); txt.textContent = `live · ${n}/${rows.length} · ${today}`;
         status.title = `${n} of ${rows.length} models refreshed live from the OpenRouter feed; the rest are the committed snapshot`;
       } else {
@@ -629,6 +915,7 @@
 
   render();
   $("#tpt-status .tpt-txt").textContent = `snapshot · ${DATA.meta.updated}`;
+  buildCombo();
   renderLegend();
   renderChart();
   refreshLive();
