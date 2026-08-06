@@ -23,19 +23,34 @@ jobs:
           node-version: "22"
 
       - name: Refresh prices + append history snapshot
+        id: refresh
+        continue-on-error: true # a feed outage must still reach the commit step below
         run: node update.mjs
 
       - name: Rebuild HTML
         run: node build.mjs
 
       - name: Commit if changed
+        env:
+          REFRESH: ${{ steps.refresh.outcome }}
         run: |
           git config user.name "tokenticker-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
-            git add pricing.json history.json index.html llm-token-price-index.html
-            git commit -m "chore: daily price refresh ($(date -u +%F))"
+            git add pricing.json history.json heartbeat.json index.html llm-token-price-index.html
+            if [ "$REFRESH" = "failure" ]; then
+              git commit -m "chore: feed unreachable, heartbeat only ($(date -u +%F))"
+            else
+              git commit -m "chore: daily price refresh ($(date -u +%F))"
+            fi
             git push
           else
             echo "No price changes today."
           fi
+
+      # Runs after the commit above, so the stamp is on record before the run goes red.
+      - name: Fail the run if the feed is down
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "::error title=Price feed unreachable::No prices refreshed; the published site is going stale. See heartbeat.json and the job summary."
+          exit 1
