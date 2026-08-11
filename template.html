@@ -167,8 +167,14 @@
   .tpt-chart .tick { fill: var(--faint); font-family: var(--mono); font-size: 10px; }
   .tpt-chart .series { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
   .tpt-chart .dot { stroke: var(--panel); stroke-width: 1.5; }
-  .tpt-chart .endlab { font-family: var(--sans); font-size: 11px; font-weight: 600; }
+  .tpt-chart .endlab { font-family: var(--sans); font-size: 10px; font-weight: 600; }
   .tpt-chart .lead { stroke-width: 1; opacity: .45; }
+  .tpt-chart .hit { fill: transparent; }
+  /* Hover-to-isolate: JS delays adding .tpt-hovering by ~500ms so passing the cursor
+     over the chart doesn't flicker; removal on mouseout is instant (see script). */
+  .tpt-chart .tpt-series { transition: opacity .18s ease; }
+  .tpt-charthost.tpt-hovering .tpt-chart .tpt-series { opacity: .28; }
+  .tpt-charthost.tpt-hovering .tpt-chart .tpt-series.tpt-hot { opacity: 1; }
   .tpt-empty { color: var(--muted); font-size: .85rem; text-align: center; padding: 40px 10px; }
   /* Series picker: quick presets + provider-grouped toggles (replaces a flat 30-pill wall) */
   .tpt-legbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
@@ -317,7 +323,7 @@
           <button data-scale="linear" type="button" aria-pressed="false">Linear</button>
         </span>
       </div>
-      <div id="tpt-chart-host"></div>
+      <div class="tpt-charthost" id="tpt-chart-host"></div>
       <div class="tpt-legbar">
         <span class="tpt-mini-label">Show</span>
         <div class="tpt-combo" id="tpt-combo">
@@ -607,6 +613,7 @@
   }
 
   function renderChart() {
+    clearTimeout(hoverTimer); hoverTarget = null; chartHost.classList.remove("tpt-hovering");
     const dates = HISTORY.snapshots.map(s => s.date);
     const series = plottedKeys().filter(k => rowByKey.has(k))
       .map(k => ({ row: rowByKey.get(k), pts: seriesFor(k) })).filter(s => s.pts.length);
@@ -621,11 +628,11 @@
     // model name (no truncation), and the plot grows tall enough that every end-label
     // gets its own row — so 30 series read as a clean list instead of a pile of "…".
     const N = series.length;
-    const LINE = 13;                                                     // label row height
+    const LINE = 12;                                                     // label row height
     const longest = Math.max(...series.map(s => s.row.name.length));
     const W = 760, m = {
       t: 14, b: 30, l: 50,
-      r: Math.min(232, Math.max(96, Math.round(longest * 6.35) + 34)),   // dot + name + pad
+      r: Math.min(232, Math.max(96, Math.round(longest * 5.8) + 34)),    // dot + name + pad
     };
     const ph = Math.max(300, N * LINE + 16);
     const H = m.t + m.b + ph;
@@ -652,14 +659,16 @@
       svg += `<text class="tick" x="${xi(i).toFixed(1)}" y="${H - m.b + 16}" text-anchor="middle">${d.slice(5)}</text>`;
     });
     svg += `<line class="axis" x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}"/>`;
-    const labels = [];
+    const labels = [], partsByKey = new Map();
     series.forEach(s => {
       const col = s.row.pvar, dash = DASH[s.row.widx % DASH.length];
       const pts = s.pts.map(p => ({ x: xByDate.get(p.date), y: ys(p.v), v: p.v, date: p.date })).filter(p => p.x != null);
-      if (pts.length > 1) svg += `<path class="series" style="stroke:${col}" stroke-dasharray="${dash}" d="M${pts.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")}"/>`;
-      pts.forEach((p, i) => { svg += `<circle class="dot" style="fill:${col}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === pts.length - 1 ? 4.5 : 3}"><title>${s.row.name} — ${p.date}: ${fmtVal(p.v)}</title></circle>`; });
+      let part = "";
+      if (pts.length > 1) part += `<path class="series" style="stroke:${col}" stroke-dasharray="${dash}" d="M${pts.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L")}"/>`;
+      pts.forEach((p, i) => { part += `<circle class="dot" style="fill:${col}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === pts.length - 1 ? 4.5 : 3}"><title>${s.row.name} — ${p.date}: ${fmtVal(p.v)}</title></circle>`; });
+      partsByKey.set(s.row.key, part);
       const last = pts[pts.length - 1];
-      labels.push({ x: last.x, dy: last.y, y: last.y, col, text: s.row.name });
+      labels.push({ key: s.row.key, x: last.x, dy: last.y, y: last.y, col, text: s.row.name });
     });
     // Declutter end-labels: they collide wherever series share a price. Keep them in
     // price order but enforce a one-row min gap, nudging the stack up if it spills past
@@ -671,15 +680,49 @@
       if (labels[i].y - labels[i - 1].y < GAP) labels[i].y = labels[i - 1].y + GAP;
     const overflow = labels.length ? labels[labels.length - 1].y - bot : 0;
     if (overflow > 0) for (const l of labels) l.y = Math.max(top, l.y - overflow);
+    // Each series' line, dots and end-label share one <g> so hovering any of them can
+    // fade every other group (see the hover handlers below). The invisible `.hit` rect
+    // spans the whole label row — the label text itself is a fiddly hover target at 10px.
     labels.forEach(l => {
+      svg += `<g class="tpt-series" data-key="${l.key}">${partsByKey.get(l.key) || ""}`;
       if (Math.abs(l.y - l.dy) > 1.5)
         svg += `<line class="lead" x1="${(l.x + 4).toFixed(1)}" y1="${l.dy.toFixed(1)}" x2="${(l.x + 8).toFixed(1)}" y2="${l.y.toFixed(1)}" style="stroke:${l.col}"/>`;
       svg += `<circle class="enddot" cx="${(l.x + 11).toFixed(1)}" cy="${l.y.toFixed(1)}" r="2.7" style="fill:${l.col}"/>`;
       svg += `<text class="endlab" x="${(l.x + 17).toFixed(1)}" y="${(l.y + 3.4).toFixed(1)}" style="fill:var(--ink)">${l.text}</text>`;
+      svg += `<rect class="hit" x="${(W - m.r).toFixed(1)}" y="${(l.y - LINE / 2).toFixed(1)}" width="${m.r.toFixed(1)}" height="${LINE}"/>`;
+      svg += `</g>`;
     });
     svg += `</svg>`;
     chartHost.innerHTML = svg;
   }
+  // Hover-to-isolate: lights up one series' group and fades the rest (or clears when g is
+  // null). Shared by the chart's own hover (delayed, below) and the legend's (instant).
+  function setHotSeries(g) {
+    chartHost.querySelectorAll(".tpt-series.tpt-hot").forEach(x => x.classList.remove("tpt-hot"));
+    if (g) { g.classList.add("tpt-hot"); chartHost.classList.add("tpt-hovering"); }
+    else chartHost.classList.remove("tpt-hovering");
+  }
+  // Resting on a series' line, dots, or end-label for ~500ms triggers the isolate above.
+  // The wait avoids flicker while the cursor is only passing through a dense plot;
+  // leaving drops the fade immediately since there's nothing to debounce on the way out.
+  let hoverTimer = null, hoverTarget = null;
+  chartHost.addEventListener("mouseover", e => {
+    const g = e.target.closest(".tpt-series");
+    if (!g || g === hoverTarget) return;
+    clearTimeout(hoverTimer);
+    hoverTarget = g;
+    hoverTimer = setTimeout(() => setHotSeries(g), 500);
+  });
+  chartHost.addEventListener("mouseout", e => {
+    const g = e.target.closest(".tpt-series");
+    if (!g || (e.relatedTarget && g.contains(e.relatedTarget))) return;
+    clearTimeout(hoverTimer);
+    hoverTarget = null;
+    setHotSeries(null);
+  });
+  // A mid-hover alt-tab can end the pointer sequence without a mouseout ever firing —
+  // drop any pending isolate so the chart doesn't get stuck fading on refocus.
+  window.addEventListener("blur", () => { clearTimeout(hoverTimer); hoverTarget = null; setHotSeries(null); });
 
   function renderLegend() {
     // Grouped by provider: a provider header (toggles all its models) over compact
@@ -729,6 +772,25 @@
       g.rows.forEach(r => allOn ? chart.sel.delete(r.key) : chart.sel.add(r.key));
     } else return;
     renderChart(); renderLegend(); syncCombo();
+  });
+
+  // Legend rows are already discrete, well-spaced targets (unlike the chart's
+  // overlapping lines), so hovering one highlights its chart line immediately — no
+  // 500ms wait. Looks up the series by key each time rather than caching a node,
+  // since renderChart() can replace the chart's whole SVG between hovers.
+  let legendHoverKey = null;
+  legendEl.addEventListener("mouseover", e => {
+    const row = e.target.closest(".tpt-leg");
+    if (!row || row.dataset.key === legendHoverKey) return;
+    legendHoverKey = row.dataset.key;
+    clearTimeout(hoverTimer); hoverTarget = null;
+    setHotSeries(chartHost.querySelector(`.tpt-series[data-key="${legendHoverKey}"]`));
+  });
+  legendEl.addEventListener("mouseout", e => {
+    const row = e.target.closest(".tpt-leg");
+    if (!row || (e.relatedTarget && row.contains(e.relatedTarget))) return;
+    legendHoverKey = null;
+    setHotSeries(null);
   });
 
   // ---- Tag combobox ----------------------------------------------------------
