@@ -779,19 +779,23 @@
   // 500ms wait. Looks up the series by key each time rather than caching a node,
   // since renderChart() can replace the chart's whole SVG between hovers.
   let legendHoverKey = null;
-  legendEl.addEventListener("mouseover", e => {
+  const legendHover = e => {
     const row = e.target.closest(".tpt-leg");
     if (!row || row.dataset.key === legendHoverKey) return;
     legendHoverKey = row.dataset.key;
     clearTimeout(hoverTimer); hoverTarget = null;
     setHotSeries(chartHost.querySelector(`.tpt-series[data-key="${legendHoverKey}"]`));
-  });
-  legendEl.addEventListener("mouseout", e => {
+  };
+  const legendUnhover = e => {
     const row = e.target.closest(".tpt-leg");
     if (!row || (e.relatedTarget && row.contains(e.relatedTarget))) return;
     legendHoverKey = null;
     setHotSeries(null);
-  });
+  };
+  legendEl.addEventListener("mouseover", legendHover);
+  legendEl.addEventListener("focusin", legendHover);
+  legendEl.addEventListener("mouseout", legendUnhover);
+  legendEl.addEventListener("focusout", legendUnhover);
 
   // ---- Tag combobox ----------------------------------------------------------
   const comboWrap = $("#tpt-combo"), comboBtn = $("#tpt-combo-btn"),
