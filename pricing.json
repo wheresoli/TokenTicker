@@ -3,7 +3,7 @@
     "title": "LLM API Token Price Index",
     "unit": "USD per 1,000,000 tokens",
     "tier": "Standard / pay-as-you-go (non-batch, non-cached unless noted)",
-    "updated": "2026-09-01",
+    "updated": "2026-09-02",
     "disclaimer": "No canonical cross-provider pricing API exists. Prices are auto-refreshed daily from the OpenRouter aggregator (with sanity guardrails) and re-checked live in your browser; OpenRouter's figures can lag or differ from each provider's official page (linked per provider). Verify against the source before relying on a figure."
   },
   "providers": [
@@ -12,7 +12,7 @@
       "accent": "#d97757",
       "accentDark": "#c86440",
       "source": "https://platform.claude.com/docs/en/about-claude/models/overview",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Claude Fable 5",
@@ -57,7 +57,7 @@
       "name": "OpenAI",
       "accent": "#10a37f",
       "source": "https://developers.openai.com/api/docs/pricing",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "GPT-5.6 Sol",
@@ -92,7 +92,7 @@
       "name": "Google",
       "accent": "#4285f4",
       "source": "https://ai.google.dev/gemini-api/docs/pricing",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Gemini 3.1 Pro",
@@ -136,7 +136,7 @@
       "name": "xAI",
       "accent": "#e34948",
       "source": "https://x.ai/api",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Grok 4.5",
@@ -162,7 +162,7 @@
       "name": "Meta Llama",
       "accent": "#178fb5",
       "source": "https://www.llama.com",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Llama 4 Maverick",
@@ -195,7 +195,7 @@
       "name": "Mistral AI",
       "accent": "#d95a8a",
       "source": "https://mistral.ai/pricing",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Mistral Large 3",
@@ -230,7 +230,7 @@
       "name": "DeepSeek",
       "accent": "#2f9e44",
       "source": "https://api-docs.deepseek.com/quick_start/pricing",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "DeepSeek V4 Pro",
@@ -254,9 +254,9 @@
           "name": "DeepSeek V4 Flash",
           "id": "deepseek-v4-flash",
           "tier": "small",
-          "input": 0.0809,
-          "output": 0.1618,
-          "cachedInput": 0.0162,
+          "input": 0.0886,
+          "output": 0.1772,
+          "cachedInput": 0.0177,
           "context": "1M"
         }
       ]
@@ -265,7 +265,7 @@
       "name": "Qwen",
       "accent": "#8a5fd0",
       "source": "https://qwenlm.github.io",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Qwen3.7 Max",
@@ -301,7 +301,7 @@
       "accent": "#eda100",
       "accentDark": "#bc7900",
       "source": "https://platform.moonshot.ai",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "Kimi K3",
@@ -327,7 +327,7 @@
       "name": "Z.ai",
       "accent": "#b45ec9",
       "source": "https://z.ai",
-      "verified": "2026-09-01",
+      "verified": "2026-09-02",
       "models": [
         {
           "name": "GLM 5.2",
